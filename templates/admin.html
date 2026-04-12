@@ -16,7 +16,11 @@
   </head>
   <body class="admin-body">
     <div class="admin-layout">
+      <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
       <aside class="sidebar">
+        <button id="mobileMenuClose" class="mobile-menu-close" type="button" aria-label="Cerrar menu">
+          <i class="ph ph-x"></i>
+        </button>
         <div class="sidebar-top">
           <div class="brand">
             <i class="ph-fill ph-atom"></i>
@@ -31,7 +35,7 @@
             <a class="nav-item" data-view="lector-qr" href="#"><i class="ph ph-scan-smiley"></i> Lector QR</a>
             <a class="nav-item" data-view="debug-qrs" href="#"><i class="ph ph-bug"></i> Debug QRs</a>
             <a class="nav-item" data-view="reportes" href="#"><i class="ph ph-chart-bar"></i> Reportes</a>
-            <a class="nav-item" style="color: var(--error);" href="{{ url_for('logout') }}"><i class="ph ph-sign-out"></i> Cerrar sesión</a>
+            <a class="nav-item" style="color: var(--error);" href="{{ url_for('rutas.logout') }}"><i class="ph ph-sign-out"></i> Cerrar sesión</a>
           </nav>
         </div>
       </aside>
@@ -43,6 +47,10 @@
         </div>
         <header class="dashboard-header">
           <div class="header-title-area">
+            <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Abrir menu">
+              <i class="ph ph-list"></i>
+              <span>Menu</span>
+            </button>
             <h1 id="headerTitle">Panel de Control</h1>
             <p id="subheaderStatus">Monitoreo en tiempo real</p>
           </div>
@@ -50,7 +58,7 @@
             <button id="openInviteModal" class="btn btn-primary" style="box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);">
               <i class="ph-bold ph-plus"></i> Nuevo Invitado
             </button>
-            <button id="notificationBellBtn" class="header-bell" style="margin-left: 8px;" type="button" aria-label="Notificaciones de lectores">
+            <button id="notificationBellBtn" class="header-bell" type="button" aria-label="Notificaciones de lectores">
               <i class="ph ph-bell"></i>
               <span id="notificationCountBadge" class="notification-count hidden">0</span>
             </button>
@@ -605,7 +613,7 @@
                 <iframe
                   id="adminLectorFrame"
                   class="lector-embed-frame"
-                  src="{{ url_for('lector') }}"
+                  src="{{ url_for('rutas.lector') }}"
                   title="Lector QR integrado"
                   loading="lazy"
                   allow="camera *"

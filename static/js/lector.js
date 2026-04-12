@@ -1,5 +1,6 @@
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
+const frozenFrame = document.getElementById("frozenFrame");
 const btnStart = document.getElementById("btnStart");
 const btnFlash = document.getElementById("btnFlash");
 const processingOverlay = document.getElementById("processingOverlay");
@@ -30,8 +31,10 @@ let currentEvent = { id: "", nombre: "Evento SIGA", estado: "borrador" };
 let currentLector = { uid: "", nombre: "", rol: "" };
 let scanIntervalId = null;
 let isProcessing = false;
+let isFrameFrozen = false;
 let nextScanAt = 0;
 let qrDetector = null;
+let detectorWarningShown = false;
 let heartbeatIntervalId = null;
 const deviceId = getOrCreateDeviceId();
 
@@ -54,7 +57,7 @@ document.addEventListener("visibilitychange", () => {
     stopAutoScanLoop();
     return;
   }
-  if (stream) startAutoScanLoop();
+  if (stream && !isFrameFrozen) startAutoScanLoop();
 });
 
 init();
@@ -62,6 +65,7 @@ init();
 async function init() {
   setConnectionStatus(navigator.onLine ? "nube" : "local");
   setupQrDetector();
+  renderDetectorSupportState();
   await ensureLectorLogin();
   await refreshLectorEstado();
   setInterval(refreshLectorEstado, 20000);
@@ -75,6 +79,24 @@ function setupQrDetector() {
   } catch (_error) {
     qrDetector = null;
   }
+}
+
+function renderDetectorSupportState() {
+  if (qrDetector || detectorWarningShown) return;
+  detectorWarningShown = true;
+  if (guestInfo) {
+    guestInfo.innerHTML = `
+      <h3>Navegador no compatible</h3>
+      <p>Este lector requiere detección nativa de QR (BarcodeDetector).</p>
+      <small>Actualiza Safari/iOS o usa un navegador compatible.</small>
+    `;
+  }
+  [btnPlusOne, btnPlusTwo, btnAll].forEach((btn) => {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.onclick = null;
+  });
+  btnCancelGuest?.classList.add("hidden");
 }
 
 function getOrCreateDeviceId() {
@@ -333,6 +355,7 @@ async function toggleCamera() {
 
 async function startCamera() {
   if (stream) return;
+  unfreezeCameraFrame({ resumeScan: false });
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: "environment" } },
@@ -340,6 +363,11 @@ async function startCamera() {
     });
 
     video.srcObject = stream;
+    video.muted = true;
+    video.setAttribute("muted", "");
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
     await video.play().catch(() => {});
 
     btnStart.textContent = "Pausar camara";
@@ -361,6 +389,7 @@ function stopCamera() {
   stream?.getTracks?.().forEach((track) => track.stop());
   stream = null;
   video.srcObject = null;
+  unfreezeCameraFrame({ resumeScan: false });
   torchEnabled = false;
   btnFlash.textContent = "Flash";
   btnFlash.disabled = true;
@@ -368,6 +397,7 @@ function stopCamera() {
 }
 
 function startAutoScanLoop() {
+  if (isFrameFrozen) return;
   stopAutoScanLoop();
   scanIntervalId = window.setInterval(() => {
     void autoScanTick();
@@ -383,6 +413,8 @@ function stopAutoScanLoop() {
 
 function canAttemptScan() {
   if (!stream) return false;
+  if (!qrDetector) return false;
+  if (isFrameFrozen) return false;
   if (isProcessing) return false;
   if (Date.now() < nextScanAt) return false;
   if (document.hidden) return false;
@@ -399,14 +431,14 @@ async function autoScanTick() {
   const frame = captureFrame();
   if (!frame) return;
 
-  const usedDetector = Boolean(qrDetector);
   const hasQr = await detectQrInCanvas();
   if (!hasQr) {
     nextScanAt = Date.now() + 180;
     return;
   }
 
-  await validateFrame(frame.imagenBase64, usedDetector);
+  freezeCameraFrame(captureFreezeFrame());
+  await validateFrame(frame.imagenBase64, true);
 }
 
 function captureFrame() {
@@ -430,13 +462,57 @@ function captureFrame() {
   };
 }
 
+function captureFreezeFrame() {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) return "";
+  const freezeCanvas = document.createElement("canvas");
+  freezeCanvas.width = vw;
+  freezeCanvas.height = vh;
+  const ctx = freezeCanvas.getContext("2d");
+  if (!ctx) return "";
+  ctx.drawImage(video, 0, 0, vw, vh);
+  return freezeCanvas.toDataURL("image/jpeg", 0.72);
+}
+
+function freezeCameraFrame(frameDataUrl = "") {
+  if (isFrameFrozen) return;
+  isFrameFrozen = true;
+  stopAutoScanLoop();
+  try {
+    video.pause();
+  } catch (_error) {
+    // noop
+  }
+  if (frozenFrame && frameDataUrl) {
+    frozenFrame.src = frameDataUrl;
+    frozenFrame.classList.remove("hidden");
+  }
+}
+
+function unfreezeCameraFrame({ resumeScan = true } = {}) {
+  if (!isFrameFrozen && !frozenFrame?.src) return;
+  isFrameFrozen = false;
+  if (frozenFrame) {
+    frozenFrame.classList.add("hidden");
+    frozenFrame.removeAttribute("src");
+  }
+  if (stream) {
+    void video.play().catch(() => {});
+  }
+  if (resumeScan && stream && !document.hidden) {
+    nextScanAt = Date.now() + 450;
+    startAutoScanLoop();
+  }
+}
+
 async function detectQrInCanvas() {
-  if (!qrDetector) return true;
+  if (!qrDetector) return false;
   try {
     const found = await qrDetector.detect(canvas);
     return Array.isArray(found) && found.length > 0;
   } catch (_error) {
-    return true;
+    return false;
   }
 }
 
@@ -457,6 +533,7 @@ async function validateFrame(imagenBase64, showLoader = true) {
     if (response.status === 401) {
       if (showLoader) hideProcessing();
       await handleLectorSessionExpired();
+      unfreezeCameraFrame({ resumeScan: false });
       return;
     }
 
@@ -465,6 +542,7 @@ async function validateFrame(imagenBase64, showLoader = true) {
 
     if (!response.ok || !data.ok || !data.valido) {
       if (data?.error === "QR no legible") {
+        unfreezeCameraFrame();
         nextScanAt = Date.now() + 500;
         return;
       }
@@ -522,6 +600,15 @@ async function validateFrame(imagenBase64, showLoader = true) {
     }
 
     if (cupoUsado >= cupoTotal) {
+      showGuestSnapshot({
+        invitadoId: data.invitado_id,
+        invitadoKey: data.invitado_key || "",
+        nombre: invitado.nombre_lider || invitado.nombre || "Invitado",
+        cuenta: invitado.id || data.invitado_id,
+        cupoTotal,
+        cupoUsado,
+        fase: data.fase_exitosa || "N/A",
+      }, "Cupo agotado. Puedes solicitar aumento de cupo.");
       vibrate("warn");
       showResult({
         type: "warn",
@@ -586,7 +673,27 @@ function resetGuestPanel() {
   });
 }
 
+function showGuestSnapshot(guest, statusText = "") {
+  const disponibles = Math.max(Number(guest.cupoTotal || 0) - Number(guest.cupoUsado || 0), 0);
+  currentValidatedGuest = null;
+  guestInfo.innerHTML = `
+    <h3>QR detectado</h3>
+    <p><strong>${escapeHtml(guest.nombre)}</strong></p>
+    <p>Cupo: <strong>${guest.cupoUsado}/${guest.cupoTotal}</strong> &nbsp;—&nbsp; Disponibles: <strong>${disponibles}</strong></p>
+    <small>ID: ${escapeHtml(guest.cuenta)} &nbsp;|&nbsp; Fase PDI: ${escapeHtml(guest.fase)}</small>
+    ${statusText ? `<p><small>${escapeHtml(statusText)}</small></p>` : ""}
+  `;
+  btnCancelGuest?.classList.add("hidden");
+  [btnPlusOne, btnPlusTwo, btnAll].forEach((btn) => {
+    if (btn) {
+      btn.disabled = true;
+      btn.onclick = null;
+    }
+  });
+}
+
 btnCancelGuest?.addEventListener("click", () => {
+  unfreezeCameraFrame();
   resetGuestPanel();
   nextScanAt = Date.now() + 500;
 });
@@ -620,6 +727,7 @@ function showGuestActions(guest) {
       }
       showConfirmation(registro.delta > 0 ? registro.delta : 1);
       bumpAforo(registro.delta > 0 ? registro.delta : 1);
+      unfreezeCameraFrame();
       resetGuestPanel();
       await refreshLectorEstado();
     };
@@ -645,9 +753,14 @@ function showResult({ type, title, message, detail, actionLabel, secondaryLabel,
   resultModal.classList.remove("hidden");
   resultModal.querySelector("[data-close='true']")?.addEventListener("click", () => {
     resultModal.classList.add("hidden");
+    if (!currentValidatedGuest) {
+      unfreezeCameraFrame();
+    }
   });
   if (secondaryLabel && typeof onSecondary === "function") {
-    resultModal.querySelector("[data-secondary='true']")?.addEventListener("click", onSecondary);
+    resultModal.querySelector("[data-secondary='true']")?.addEventListener("click", async () => {
+      await onSecondary();
+    });
   }
 }
 

@@ -22,7 +22,16 @@
       </header>
 
       <section class="camera-stage" id="cameraStage">
-        <video id="video" autoplay playsinline></video>
+        <video
+          id="video"
+          autoplay
+          playsinline
+          webkit-playsinline
+          muted
+          disablepictureinpicture
+          controlslist="nodownload nofullscreen noplaybackrate"
+        ></video>
+        <img id="frozenFrame" class="camera-frozen hidden" alt="Frame congelado de QR" />
         <div class="camera-mask"></div>
         <div class="scan-frame"></div>
 

@@ -1,7 +1,6 @@
 Flask==3.0.3
 firebase-admin==6.6.0
-opencv-python==4.10.0.84
-pyzbar==0.1.9
+opencv-python-headless==4.10.0.84
 numpy==1.26.4
 yagmail==0.15.293
 python-dotenv==1.0.1
