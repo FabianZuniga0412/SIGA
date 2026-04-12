@@ -6,6 +6,7 @@ import csv
 import time
 import re
 import unicodedata
+from zoneinfo import ZoneInfo
 import yagmail
 import qrcode
 from datetime import datetime, timezone
@@ -364,7 +365,23 @@ def enviar_invitacion_email(client, invitado, key_hash):
     email = normalizar_email(invitado.get("email"))
     cupo = safe_int(invitado.get("cupo_total", MIN_CUPO_TOTAL), MIN_CUPO_TOTAL)
     qr_payload = f"{invitado_id}|{key_hash}"
-    asunto = "Invitacion SIGA - Acceso al evento"
+    evento = firebase.evento_actual_config() if firebase.firebase_ready else {}
+    evento_nombre = str((evento or {}).get("nombre", "")).strip() or "SIGA"
+    evento_ubicacion = str((evento or {}).get("ubicacion", "")).strip() or "Por confirmar"
+    evento_timezone = str((evento or {}).get("timezone", "America/Mexico_City")).strip() or "America/Mexico_City"
+    fecha_inicio = str((evento or {}).get("fecha_inicio", "")).strip()
+    fecha_evento = "Por confirmar"
+    hora_evento = "Por confirmar"
+    ts_evento = parse_timestamp(fecha_inicio)
+    if ts_evento.year > 1900:
+        try:
+            ts_evento = ts_evento.astimezone(ZoneInfo(evento_timezone))
+        except Exception:
+            ts_evento = ts_evento.astimezone()
+        fecha_evento = ts_evento.strftime("%Y-%m-%d")
+        hora_evento = ts_evento.strftime("%H:%M")
+
+    asunto = f"{evento_nombre} - Invitación"
     
     # Generar QR optimizado
     qr = qrcode.QRCode(version=1, box_size=6, border=2)
@@ -383,45 +400,24 @@ def enviar_invitacion_email(client, invitado, key_hash):
     <head>
         <meta charset="UTF-8">
         <style>
-            body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7fb; margin: 0; padding: 20px; }}
-            .container {{ max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
-            .header {{ background-color: #6366f1; color: #ffffff; padding: 24px; text-align: center; }}
-            .header h1 {{ margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }}
-            .content {{ padding: 32px 24px; color: #333333; text-align: center; }}
-            .content p {{ font-size: 15px; line-height: 1.6; margin-bottom: 24px; color: #475569; }}
-            .info-box {{ background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; display: inline-block; }}
-            .info-box p {{ margin: 8px 0; font-size: 14px; color: #1e293b; }}
-            .info-box strong {{ color: #6366f1; font-weight: 600; display: inline-block; min-width: 120px; }}
-            .qr-section p {{ font-weight: 600; color: #1e293b; margin-bottom: 12px; }}
-            .footer {{ background-color: #f8fafc; color: #64748b; text-align: center; padding: 16px; font-size: 13px; border-top: 1px solid #e2e8f0; }}
+            body {{ font-family: Arial, sans-serif; color: #111111; margin: 0; padding: 16px; }}
+            p {{ margin: 0 0 8px 0; line-height: 1.35; }}
+            .spacer {{ height: 8px; }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <h1>Invitación Oficial SIGA</h1>
-            </div>
-            <div class="content">
-                <p>Hola <strong style="color:#1e293b;">{nombre}</strong>,</p>
-                <p>Tu registro se ha completado con éxito. Usa esta invitación digital para tener un acceso o ingreso rápido el día del evento.</p>
-                
-                <div class="info-box">
-                    <p><strong>ID de Invitado:</strong> {invitado_id}</p>
-                    <p><strong>Cupo Máximo:</strong> {cupo} personas</p>
-                </div>
-                
-                <div class="qr-section">
-                    <p>Presenta este código QR en el acceso:</p>
-                    <!-- Yagmail injects inline img class here -->
+        <p>Hola {nombre},</p>
+        <p>Usa esta invitación digital para tener acceso el día del evento.</p>
+        <p>ID de Invitado: {invitado_id}</p>
+        <p>Cupo Máximo: {cupo} personas</p>
+        <p>Fecha del evento: {fecha_evento}</p>
+        <p>Hora del evento: {hora_evento}</p>
+        <p>Ubicación: {evento_ubicacion}</p>
+        <div class="spacer"></div>
+        <p>Presenta este código QR en el acceso:</p>
     """
     
-    html_part2 = f"""
-                </div>
-            </div>
-            <div class="footer">
-                <p>Este es un correo automático provisto de forma segura por SIGA.</p>
-            </div>
-        </div>
+    html_part2 = """
     </body>
     </html>
     """
