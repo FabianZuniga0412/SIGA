@@ -296,42 +296,6 @@ function bindUI() {
     await refreshSolicitudesCupo();
   });
 
-  solicitudesCupoBody?.addEventListener("click", async (event) => {
-    const button = event.target.closest("button[data-solicitud-action]");
-    if (!button) return;
-    const solicitudId = String(button.getAttribute("data-solicitud-id") || "").trim();
-    const action = String(button.getAttribute("data-solicitud-action") || "").trim();
-    if (!solicitudId) return;
-
-    if (action === "rechazar") {
-      if (!confirm("¿Rechazar esta solicitud de cupo?")) return;
-      await api(`/api/solicitudes_cupo/${encodeURIComponent(solicitudId)}/resolver`, {
-        method: "POST",
-        body: { accion: "rechazar" },
-      });
-      await Promise.all([refreshSolicitudesCupo(), refreshInvitados(), refreshDashboard()]);
-      showGlobalNotice("Solicitud de cupo rechazada.", "success");
-      return;
-    }
-
-    if (action === "aprobar") {
-      const sugerida = Math.max(Number(button.getAttribute("data-cantidad") || 1), 1);
-      const entrada = window.prompt("Cantidad a aprobar:", String(sugerida));
-      if (entrada === null) return;
-      const cantidad = Math.trunc(Number(entrada));
-      if (!Number.isFinite(cantidad) || cantidad < 1) {
-        alert("Cantidad inválida");
-        return;
-      }
-      await api(`/api/solicitudes_cupo/${encodeURIComponent(solicitudId)}/resolver`, {
-        method: "POST",
-        body: { accion: "aprobar", cantidad_aprobada: cantidad },
-      });
-      await Promise.all([refreshSolicitudesCupo(), refreshInvitados(), refreshDashboard()]);
-      showGlobalNotice(`Cupo aprobado (${cantidad} adicionales).`, "success");
-    }
-  });
-
   batchSendBtn?.addEventListener("click", () => ejecutarBatch("enviar_invitacion"));
   batchExportBtn?.addEventListener("click", () => ejecutarBatch("exportar"));
 
@@ -664,7 +628,7 @@ async function refreshInvitados() {
 
 async function refreshSolicitudesCupo() {
   try {
-    const res = await api("/api/solicitudes_cupo?status=pendiente&limit=100");
+    const res = await api("/api/solicitudes_cupo?limit=200");
     const data = res.data || {};
     solicitudesCupoState.items = data.items || [];
     solicitudesCupoState.total = Number(data.total || solicitudesCupoState.items.length || 0);
@@ -882,23 +846,18 @@ function renderSolicitudesCupo(rows) {
       <td>${escapeHtml(formatIso(x.created_at) || x.created_at || "--")}</td>
       <td>${escapeHtml(x.nombre_invitado || x.invitado_id || "")}<br/><small>${escapeHtml(x.invitado_id || "")}</small></td>
       <td>+${Number(x.cantidad_solicitada || 0)}</td>
+      <td>+${Number(x.cantidad_aprobada || 0)}</td>
+      <td>${Number(x.delta_cupo || 0) > 0 ? `+${Number(x.delta_cupo || 0)}` : String(Number(x.delta_cupo || 0))}</td>
+      <td>${Number(x.cupo_total_anterior || 0)} -> ${Number(x.cupo_total_nuevo || x.cupo_total_anterior || 0)}</td>
       <td>${escapeHtml(x.solicitado_desde || "lector")}</td>
-      <td>${escapeHtml(x.motivo || "-")}</td>
-      <td>
-        <div class="inline-actions">
-          <button class="btn btn-primary btn-inline" data-solicitud-action="aprobar" data-solicitud-id="${escapeHtml(x.id)}" data-cantidad="${Number(
-            x.cantidad_solicitada || 1
-          )}">Aprobar</button>
-          <button class="btn btn-secondary btn-inline" data-solicitud-action="rechazar" data-solicitud-id="${escapeHtml(x.id)}">Rechazar</button>
-        </div>
-      </td>
+      <td><span class="status-badge ${String(x.status || "").toLowerCase() === "aprobada" ? "activo" : "cerrado"}">${escapeHtml(x.status || "-")}</span></td>
     </tr>`
         )
         .join("")
-    : '<tr><td colspan="6" class="empty-row">Sin solicitudes pendientes</td></tr>';
+    : '<tr><td colspan="8" class="empty-row">Sin historial de cambios de cupo</td></tr>';
 
   if (solicitudesCupoMeta) {
-    solicitudesCupoMeta.textContent = `Pendientes: ${items.length}`;
+    solicitudesCupoMeta.textContent = `Registros: ${items.length}`;
   }
 }
 

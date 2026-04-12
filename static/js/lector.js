@@ -793,10 +793,31 @@ async function solicitarAumentoCupo(invitadoId, invitadoKey, cupoUsado = 0, cupo
     if (!response.ok || data.ok === false) {
       throw new Error(data.error || `HTTP ${response.status}`);
     }
+    const decision = String(data.decision_automatica || "").toLowerCase();
+    if (decision === "aprobada") {
+      showResult({
+        type: "success",
+        title: "Cupo aprobado",
+        message: "La solicitud fue aprobada automáticamente por disponibilidad.",
+        detail: `Cantidad aprobada: +${Number(data?.solicitud?.cantidad_aprobada || cantidad)}`,
+        actionLabel: "Cerrar",
+      });
+      return;
+    }
+    if (decision === "rechazada") {
+      showResult({
+        type: "warn",
+        title: "Solicitud rechazada",
+        message: "No hay disponibilidad de aforo para aumentar cupo en este momento.",
+        detail: `Solicitado: +${cantidad}`,
+        actionLabel: "Cerrar",
+      });
+      return;
+    }
     showResult({
       type: "success",
-      title: "Solicitud enviada",
-      message: "El administrador ya recibió la solicitud de aumento de cupo.",
+      title: "Solicitud registrada",
+      message: "La solicitud de cupo fue registrada.",
       detail: `Cantidad solicitada: +${cantidad}`,
       actionLabel: "Cerrar",
     });

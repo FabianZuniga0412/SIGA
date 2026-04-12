@@ -635,51 +635,55 @@ def api_solicitudes_cupo():
     if not invitado_key or not isinstance(invitado, dict):
         return jsonify({"ok": False, "error": "Invitado no encontrado"}), 404
 
-    solicitudes = firebase.leer_solicitudes_cupo()
-    if funciones_extras.existe_solicitud_pendiente(solicitudes, invitado_key):
-        return jsonify({"ok": False, "error": "Ya existe una solicitud pendiente para este invitado", "code": "SOLICITUD_DUPLICADA"}), 409
-
     invitados = firebase.leer_invitados()
     disponibilidad = firebase.resumen_disponibilidad_cupo(invitados)
     disponibles = max(funciones_extras.safe_int(disponibilidad.get("boletos_disponibles"), 0), 0)
-    if disponibles <= 0:
-        return jsonify(
-            {
-                "ok": False,
-                "error": "No hay disponibilidad de aforo para asignar más cupo",
-                "code": "AFORO_SIN_DISPONIBILIDAD",
-                "aforo": disponibilidad,
-            }
-        ), 409
-    if cantidad_solicitada > disponibles:
-        return jsonify(
-            {
-                "ok": False,
-                "error": f"Solo hay {disponibles} boletos disponibles antes de alcanzar el aforo máximo",
-                "code": "SOLICITUD_EXCEDE_AFORO",
-                "aforo": disponibilidad,
-            }
-        ), 409
+    cupo_total_actual = max(
+        funciones_extras.safe_int(invitado.get("cupo_total", funciones_extras.MIN_CUPO_TOTAL), funciones_extras.MIN_CUPO_TOTAL),
+        funciones_extras.MIN_CUPO_TOTAL,
+    )
+    auto_aprobada = disponibles > 0 and cantidad_solicitada <= disponibles
+    cantidad_aprobada = cantidad_solicitada if auto_aprobada else 0
+    nuevo_cupo_total = cupo_total_actual + cantidad_aprobada
+    status = "aprobada" if auto_aprobada else "rechazada"
+    decision_note = (
+        "Aprobación automática por disponibilidad de aforo."
+        if auto_aprobada
+        else f"Rechazo automático: disponibilidad insuficiente (disponibles: {disponibles})."
+    )
+
+    if auto_aprobada:
+        firebase.db.reference(f"invitados/{invitado_key}").update({"cupo_total": nuevo_cupo_total})
 
     registro = {
         "invitado_id": invitado_id,
         "invitado_key": invitado_key,
         "nombre_invitado": invitado.get("nombre_lider") or invitado.get("nombre") or invitado_id,
         "cantidad_solicitada": cantidad_solicitada,
-        "cantidad_aprobada": 0,
-        "status": "pendiente",
+        "cantidad_aprobada": cantidad_aprobada,
+        "status": status,
         "motivo": motivo,
         "solicitado_por_uid": solicitante["uid"],
         "solicitado_por_nombre": solicitante["nombre"],
         "solicitado_desde": solicitante["origen"],
         "created_at": funciones_extras.now_iso(),
-        "resolved_at": "",
-        "resolved_by": "",
-        "decision_note": "",
+        "resolved_at": funciones_extras.now_iso(),
+        "resolved_by": "sistema_auto",
+        "decision_note": decision_note,
+        "cupo_total_anterior": cupo_total_actual,
+        "cupo_total_nuevo": nuevo_cupo_total,
+        "delta_cupo": cantidad_aprobada,
     }
     ref = firebase.db.reference("solicitudes_cupo").push(registro)
     solicitud_id = str(ref.key or "").strip()
-    return jsonify({"ok": True, "solicitud": {"id": solicitud_id, **registro}, "aforo": disponibilidad})
+    return jsonify(
+        {
+            "ok": True,
+            "solicitud": {"id": solicitud_id, **registro},
+            "decision_automatica": status,
+            "aforo": disponibilidad,
+        }
+    )
 
 @rutas_bp.route("/api/solicitudes_cupo/<solicitud_id>/resolver", methods=["POST"])
 def api_resolver_solicitud_cupo(solicitud_id):

@@ -249,11 +249,11 @@
             <section class="card stack-gap">
               <div class="action-row">
                 <div>
-                  <h3>Solicitudes de cupo</h3>
-                  <p class="section-subtitle">Aprueba o rechaza solicitudes de aumento cuando haya disponibilidad de aforo.</p>
+                  <h3>Historial de cambios de cupo</h3>
+                  <p class="section-subtitle">Registro automático de solicitudes y ajustes aplicados de cupo por invitado.</p>
                 </div>
                 <div class="action-row">
-                  <span id="solicitudesCupoMeta" class="status-badge">Pendientes: 0</span>
+                  <span id="solicitudesCupoMeta" class="status-badge">Registros: 0</span>
                   <button id="solicitudesCupoRefresh" class="btn btn-muted" type="button">Actualizar</button>
                 </div>
               </div>
@@ -263,15 +263,17 @@
                     <tr>
                       <th>Fecha</th>
                       <th>Invitado</th>
-                      <th>Solicita</th>
+                      <th>Solicitado</th>
+                      <th>Aprobado</th>
+                      <th>Cambio</th>
+                      <th>Cupo</th>
                       <th>Canal</th>
-                      <th>Motivo</th>
-                      <th>Acciones</th>
+                      <th>Estado</th>
                     </tr>
                   </thead>
                   <tbody id="solicitudesCupoBody">
                     <tr>
-                      <td colspan="6" class="empty-row">Sin solicitudes pendientes</td>
+                      <td colspan="8" class="empty-row">Sin historial de cambios de cupo</td>
                     </tr>
                   </tbody>
                 </table>
