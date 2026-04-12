@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SIGA - Admin</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-layout">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="brand">
+            <i class="ph-fill ph-atom"></i>
+            SIGA 2026<br><small style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Auditorio Principal</small>
+          </div>
+          <nav class="nav-menu" id="navMenu">
+            <a class="nav-item active" data-view="dashboard" href="#"><i class="ph ph-squares-four"></i> Panel de Control</a>
+            <a class="nav-item" data-view="invitados" href="#"><i class="ph ph-users-three"></i> Invitados</a>
+            <a class="nav-item" data-view="eventos" href="#"><i class="ph ph-calendar-blank"></i> Eventos</a>
+            <a class="nav-item" data-view="nuevo-evento" href="#"><i class="ph ph-calendar-plus"></i> Planeación e Historial</a>
+            <a class="nav-item" data-view="lectores" href="#"><i class="ph ph-qr-code"></i> Lectores</a>
+            <a class="nav-item" data-view="lector-qr" href="#"><i class="ph ph-scan-smiley"></i> Lector QR</a>
+            <a class="nav-item" data-view="debug-qrs" href="#"><i class="ph ph-bug"></i> Debug QRs</a>
+            <a class="nav-item" data-view="reportes" href="#"><i class="ph ph-chart-bar"></i> Reportes</a>
+            <a class="nav-item" style="color: var(--error);" href="{{ url_for('logout') }}"><i class="ph ph-sign-out"></i> Cerrar sesión</a>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="dashboard-content">
+        <div id="globalNotice" class="global-notice hidden" role="status" aria-live="polite">
+          <span id="globalNoticeText"></span>
+          <button id="globalNoticeClose" class="btn btn-muted" type="button">Cerrar</button>
+        </div>
+        <header class="dashboard-header">
+          <div class="header-title-area">
+            <h1 id="headerTitle">Panel de Control</h1>
+            <p id="subheaderStatus">Monitoreo en tiempo real</p>
+          </div>
+          <div class="header-profile" style="gap: 24px;">
+            <button id="openInviteModal" class="btn btn-primary" style="box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);">
+              <i class="ph-bold ph-plus"></i> Nuevo Invitado
+            </button>
+            <button id="notificationBellBtn" class="header-bell" style="margin-left: 8px;" type="button" aria-label="Notificaciones de lectores">
+              <i class="ph ph-bell"></i>
+              <span id="notificationCountBadge" class="notification-count hidden">0</span>
+            </button>
+            <div id="notificationsPanel" class="notifications-panel hidden">
+              <div class="notifications-head">
+                <strong>Notificaciones</strong>
+                <button id="clearNotificationsBtn" class="btn btn-muted" type="button">Limpiar</button>
+              </div>
+              <div id="notificationsBody" class="notifications-body">
+                <p class="notifications-empty">Sin notificaciones</p>
+              </div>
+            </div>
+          </div>
+        </header>
+        <section id="view-dashboard" class="view-section">
+          <div class="dashboard-layout-main">
+            <div class="dashboard-primary stack-gap">
+              <!-- Hero Event Card -->
+              <section class="hero-event-card">
+                <div class="hero-event-left">
+                  <div class="hero-event-icon">
+                    <i class="ph-fill ph-confetti"></i>
+                  </div>
+                  <span id="opsEventChip">Evento activo: --</span>
+                  <span class="tag-pill tag-green" id="opsAforoChip">Aforo: 0 / 0</span>
+                </div>
+                <!-- You can add a button here or additional actions if needed -->
+              </section>
+
+              <!-- KPIs -->
+              <section class="metrics-grid">
+                <article class="metric-card" id="aforoCard">
+                  <div class="metric-header">
+                    <div class="metric-icon icon-purple"><i class="ph-fill ph-users-three"></i></div>
+                    <span class="metric-title">Aforo Actual</span>
+                  </div>
+                  <div class="metric-value" id="aforoValue">0 / 0</div>
+                  <div class="metric-sub" id="aforoLevelText">Nivel: Normal</div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" id="aforoProgress" style="width: 0%"></div>
+                  </div>
+                </article>
+
+                <article class="metric-card">
+                  <div class="metric-header">
+                    <div class="metric-icon icon-green"><i class="ph-fill ph-clipboard-text"></i></div>
+                    <span class="metric-title">Invitados Registrados</span>
+                  </div>
+                  <div class="metric-value" id="metricRegistrados">0</div>
+                  <div class="metric-sub">Total registrados</div>
+                </article>
+
+                <article class="metric-card">
+                  <div class="metric-header">
+                    <div class="metric-icon icon-orange"><i class="ph-fill ph-hourglass-high"></i></div>
+                    <span class="metric-title">Invitados Pendientes</span>
+                  </div>
+                  <div class="metric-value" id="metricPendientes">0</div>
+                  <div class="metric-sub">Pendientes por ingresar</div>
+                </article>
+
+                <article class="metric-card">
+                  <div class="metric-header">
+                    <div class="metric-icon icon-blue"><i class="ph-fill ph-chart-line-up"></i></div>
+                    <span class="metric-title">Lectores Online</span>
+                  </div>
+                  <div class="metric-value" id="metricReadersOnline">0</div>
+                  <div class="metric-sub">Dispositivos activos</div>
+                </article>
+              </section>
+
+              <section class="card sync-card" id="syncCard">
+                <i class="ph-duotone ph-hard-drives sync-illlustration"></i>
+                <div class="sync-illustration-check"><i class="ph-bold ph-check"></i></div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
+                  <i class="ph ph-arrows-clockwise"></i>
+                  <h2 style="margin: 0;">Sincronización</h2>
+                </div>
+                <div class="metric-title">Última sincronización</div>
+                <div class="metric-value" id="metricLastSync">--</div>
+                <div class="metric-title" style="margin-bottom: 24px;">Pendientes: <strong id="metricSync">0</strong></div>
+                <button class="btn btn-primary btn-block" id="retrySyncBtn" type="button">Reintentar Sync</button>
+              </section>
+
+              <section class="card stack-gap">
+                <h2>Estado de Lectores</h2>
+                <div class="split-stats-grid">
+                  <div class="split-stat">
+                    <div class="split-stat-header"><i class="ph ph-desktop"></i> Lectores Local</div>
+                    <div class="split-stat-val" id="metricReadersLocal">0</div>
+                  </div>
+                  <div class="split-stat">
+                    <div class="split-stat-header"><i class="ph ph-wifi-high"></i> Lectores Detectados</div>
+                    <div class="split-stat-val" id="metricReadersTotal">0</div>
+                  </div>
+                </div>
+                <div class="table-wrap compact-table-wrap">
+                  <table class="compact-table">
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>PIN</th>
+                        <th>Modo</th>
+                        <th>Último ping</th>
+                      </tr>
+                    </thead>
+                    <tbody id="metricReadersBody">
+                      <tr>
+                        <td colspan="4" class="empty-row">
+                          <div class="null-state">
+                            <i class="ph-duotone ph-package"></i>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <!-- Últimos Ingresos -->
+              <section class="card ingresos-card">
+                <div class="table-header">
+                  <h2>Últimos Ingresos (5)</h2>
+                  <button id="goReportesBtn" type="button" class="btn btn-muted">Ver reportes completos</button>
+                </div>
+                <div class="table-wrap compact-table-wrap">
+                  <table class="compact-table">
+                    <thead>
+                      <tr>
+                        <th>Hora</th>
+                        <th>Nombre Líder</th>
+                        <th>Cupo</th>
+                        <th>Entraron</th>
+                        <th>Fase PDI</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ingresosBody">
+                      <tr>
+                        <td colspan="5" class="empty-row">Sin ingresos registrados aún</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="table-footer">
+                    <a href="#" id="viewAllIngresos">Ver todos los ingresos</a>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+          </div>
+        </section>
+
+        <section id="view-invitados" class="view-section hidden">
+          <div class="invitados-layout stack-gap">
+            <section class="card stack-gap">
+              <div class="section-head">
+                <i class="ph-fill ph-users section-head-icon"></i>
+                <div>
+                  <h2>Gestión de Invitados</h2>
+                  <p class="section-subtitle">Busca, filtra y ejecuta acciones masivas de forma rápida.</p>
+                </div>
+              </div>
+              <form id="invitadosFilterForm" class="inline-form invitados-filter-form">
+                <input id="invitadosSearch" name="q" type="text" placeholder="Buscar por ID, nombre o email" />
+                <button class="btn btn-secondary" type="submit">Buscar</button>
+              </form>
+
+              <div class="action-row invitados-actions-row">
+                <select id="batchScope" class="btn btn-muted">
+                  <option value="selected">Aplicar a seleccionados</option>
+                  <option value="filtered">Aplicar a todos los filtrados</option>
+                </select>
+                <button id="batchSendBtn" type="button" class="btn btn-primary">Enviar invitación</button>
+                <button id="batchExportBtn" type="button" class="btn btn-secondary">Exportar CSV</button>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="table-wrap">
+                <table class="invitados-table">
+                  <thead>
+                    <tr>
+                      <th><input id="selectAllInvitados" type="checkbox" /></th>
+                      <th>ID</th>
+                      <th>Nombre</th>
+                      <th>Email</th>
+                      <th>Cupo</th>
+                      <th>Usado</th>
+                      <th>Invitación</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="invitadosBody"></tbody>
+                </table>
+              </div>
+              <div class="action-row">
+                <button id="invitadosPrevPage" class="btn btn-muted" type="button">Anterior</button>
+                <span id="invitadosPageInfo">Página 1</span>
+                <button id="invitadosNextPage" class="btn btn-muted" type="button">Siguiente</button>
+              </div>
+            </section>
+
+            <section class="card stack-gap">
+              <div class="action-row">
+                <div>
+                  <h3>Solicitudes de cupo</h3>
+                  <p class="section-subtitle">Aprueba o rechaza solicitudes de aumento cuando haya disponibilidad de aforo.</p>
+                </div>
+                <div class="action-row">
+                  <span id="solicitudesCupoMeta" class="status-badge">Pendientes: 0</span>
+                  <button id="solicitudesCupoRefresh" class="btn btn-muted" type="button">Actualizar</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Invitado</th>
+                      <th>Solicita</th>
+                      <th>Canal</th>
+                      <th>Motivo</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="solicitudesCupoBody">
+                    <tr>
+                      <td colspan="6" class="empty-row">Sin solicitudes pendientes</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <details class="quick-actions card collapse-card">
+              <summary>Importación masiva</summary>
+              <div class="collapse-body stack-gap">
+                <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-label="Subir archivo CSV o XLSX">
+                  <p><strong>Importación real CSV/XLSX</strong></p>
+                  <p class="upload-zone-hint">Arrastra y suelta aquí o haz clic para seleccionar archivo</p>
+                  <button id="selectFileBtn" class="btn btn-muted" type="button">Seleccionar archivo</button>
+                  <input id="fileInput" type="file" accept=".csv,.xlsx,.xls" hidden />
+                </div>
+
+                <div class="progress-wrapper hidden" id="uploadProgressWrapper">
+                  <p id="uploadStatus">Procesando archivo...</p>
+                  <div class="progress-bar">
+                    <div class="progress-fill" id="uploadProgress" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div class="action-row">
+                  <button class="btn btn-secondary" type="button" id="downloadTemplateBtn">Descargar Plantilla Excel</button>
+                  <button class="btn btn-primary" id="sendInvitesBtn" type="button">Enviar Invitaciones (Lote)</button>
+                </div>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="view-eventos" class="view-section hidden">
+          <div class="eventos-layout">
+            <div class="eventos-main stack-gap">
+              <section class="card stack-gap">
+                <div class="section-head">
+                  <i class="ph-fill ph-calendar-check section-head-icon"></i>
+                  <div>
+                    <h2>Evento Activo</h2>
+                    <p class="section-subtitle">Controla el estado del evento operativo en curso.</p>
+                  </div>
+                </div>
+                <div class="action-row">
+                  <button class="btn btn-muted" id="closeActiveEventBtn" type="button">Cerrar Evento Activo</button>
+                </div>
+                <p id="eventoActivoStatus">Sin evento activo</p>
+              </section>
+
+              <details class="card collapse-card">
+                <summary>Historial de Cambios</summary>
+                <div class="collapse-body stack-gap">
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Actor</th>
+                          <th>Entidad</th>
+                          <th>Acción</th>
+                          <th>Cambios</th>
+                        </tr>
+                      </thead>
+                      <tbody id="auditBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <div class="eventos-side stack-gap">
+              <section class="card stack-gap">
+                <h2>Configuración del Evento Actual</h2>
+                <p class="form-intro">Edita aquí la configuración operativa del evento activo. Los cambios se registran en el historial.</p>
+                <form id="eventoActualForm" class="grid-form two-cols evento-config-form">
+                  <input name="id_evento" type="hidden" />
+                  <div class="form-field">
+                    <label for="eventoNombre">Nombre del evento</label>
+                    <input id="eventoNombre" name="nombre" type="text" placeholder="Ej. Evento SIGA 2026" required />
+                  </div>
+                  <div class="form-field">
+                    <label for="eventoUbicacion">Ubicación</label>
+                    <input id="eventoUbicacion" name="ubicacion" type="text" placeholder="Ej. Auditorio Principal" />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="eventoAforoMax">Aforo máximo</label>
+                    <input id="eventoAforoMax" name="aforo_max" type="number" min="0" placeholder="Ej. 200" />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="eventoFechaInicio">Inicio del evento</label>
+                    <input id="eventoFechaInicio" name="fecha_inicio" type="datetime-local" />
+                  </div>
+                  <div class="form-field">
+                    <label for="eventoFechaFin">Fin del evento</label>
+                    <input id="eventoFechaFin" name="fecha_fin" type="datetime-local" />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="eventoTimezone">Zona horaria</label>
+                    <select id="eventoTimezone" name="timezone">
+                      <option value="America/Mexico_City">America/Mexico_City</option>
+                      <option value="America/Tijuana">America/Tijuana</option>
+                      <option value="America/Cancun">America/Cancun</option>
+                      <option value="America/Monterrey">America/Monterrey</option>
+                      <option value="America/Chihuahua">America/Chihuahua</option>
+                      <option value="America/Hermosillo">America/Hermosillo</option>
+                      <option value="America/New_York">America/New_York</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
+
+                  <button class="btn btn-primary evento-config-submit" id="eventoConfigSaveBtn" type="submit" disabled>Guardar Configuración</button>
+                </form>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-nuevo-evento" class="view-section hidden">
+          <div class="stack-gap">
+            <section class="card stack-gap">
+              <div class="section-head">
+                <i class="ph-fill ph-calendar-plus section-head-icon"></i>
+                <div>
+                  <h2>Preparar Siguiente Evento</h2>
+                  <p class="section-subtitle">Configura el evento siguiente como “Listo” para activarlo cuando sea necesario.</p>
+                </div>
+              </div>
+              <form id="nuevoEventoForm" class="grid-form two-cols evento-config-form">
+                <div class="form-field">
+                  <label for="nuevoEventoNombre">Nombre del evento</label>
+                  <input id="nuevoEventoNombre" name="nombre" type="text" placeholder="Ej. Evento SIGA 2026" required />
+                </div>
+                <div class="form-field">
+                  <label for="nuevoEventoUbicacion">Ubicación</label>
+                  <input id="nuevoEventoUbicacion" name="ubicacion" type="text" placeholder="Ej. Auditorio Principal" />
+                </div>
+
+                <div class="form-field">
+                  <label for="nuevoEventoAforoMax">Aforo máximo</label>
+                  <input id="nuevoEventoAforoMax" name="aforo_max" type="number" min="0" placeholder="Ej. 200" />
+                </div>
+
+                <div class="form-field">
+                  <label for="nuevoEventoFechaInicio">Inicio del evento</label>
+                  <input id="nuevoEventoFechaInicio" name="fecha_inicio" type="datetime-local" />
+                </div>
+                <div class="form-field">
+                  <label for="nuevoEventoFechaFin">Fin del evento</label>
+                  <input id="nuevoEventoFechaFin" name="fecha_fin" type="datetime-local" />
+                </div>
+
+                <div class="form-field">
+                  <label for="nuevoEventoTimezone">Zona horaria</label>
+                  <select id="nuevoEventoTimezone" name="timezone">
+                    <option value="America/Mexico_City">America/Mexico_City</option>
+                    <option value="America/Tijuana">America/Tijuana</option>
+                    <option value="America/Cancun">America/Cancun</option>
+                    <option value="America/Monterrey">America/Monterrey</option>
+                    <option value="America/Chihuahua">America/Chihuahua</option>
+                    <option value="America/Hermosillo">America/Hermosillo</option>
+                    <option value="America/New_York">America/New_York</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </div>
+
+                <button class="btn btn-primary evento-config-submit" type="submit">Guardar como Listo</button>
+              </form>
+            </section>
+
+            <section class="card stack-gap">
+              <div class="action-row">
+                <div>
+                  <h2>Historial de Eventos</h2>
+                  <p class="section-subtitle">Consulta eventos ocurridos y eventos listos para siguiente activación.</p>
+                </div>
+                <span id="eventosHistMeta" class="status-badge">Total: 0</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nombre</th>
+                      <th>Ubicación</th>
+                      <th>Aforo</th>
+                      <th>Inicio</th>
+                      <th>Fin</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="eventosHistoryBody">
+                    <tr>
+                      <td colspan="8" class="empty-row">Sin eventos registrados</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="view-lectores" class="view-section hidden">
+          <div class="lectores-layout stack-gap">
+            <section class="card stack-gap">
+              <div class="section-head">
+                <i class="ph-fill ph-link section-head-icon"></i>
+                <div>
+                  <h2>Portal de Lectores</h2>
+                  <p class="section-subtitle">Comparte acceso rápido al portal de escaneo desde otros dispositivos.</p>
+                </div>
+              </div>
+              <div class="lectores-portal-grid">
+                <a id="lectorQrLink" href="#" target="_blank" rel="noopener" aria-label="Abrir portal de lectores">
+                  <div id="lectorAccessQr" class="lector-access-qr"></div>
+                </a>
+                <div class="stack-gap lectores-portal-content">
+                  <p class="section-subtitle">Escanea o copia el enlace para abrir el lector en celular o tablet.</p>
+                  <input id="lectorAccessLink" type="text" readonly />
+                  <div class="action-row">
+                    <button id="openLectorLinkBtn" type="button" class="btn btn-secondary">Abrir portal</button>
+                    <button id="copyLectorLinkBtn" type="button" class="btn btn-primary">Copiar enlace</button>
+                    <button id="downloadLectorQrBtn" type="button" class="btn btn-muted">Descargar QR</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="metrics-grid lectores-metrics-grid">
+              <article class="metric-card">
+                <div class="metric-header">
+                  <div class="metric-icon icon-blue"><i class="ph-fill ph-users-three"></i></div>
+                  <span class="metric-title">Lectores Totales</span>
+                </div>
+                <div class="metric-value" id="lectoresTotalCount">0</div>
+              </article>
+              <article class="metric-card">
+                <div class="metric-header">
+                  <div class="metric-icon icon-green"><i class="ph-fill ph-check-circle"></i></div>
+                  <span class="metric-title">Activos (habilitados)</span>
+                </div>
+                <div class="metric-value" id="lectoresActivosCount">0</div>
+              </article>
+              <article class="metric-card">
+                <div class="metric-header">
+                  <div class="metric-icon icon-purple"><i class="ph-fill ph-wifi-high"></i></div>
+                  <span class="metric-title">Online ahora</span>
+                </div>
+                <div class="metric-value" id="lectoresOnlineCount">0</div>
+              </article>
+            </section>
+
+            <section class="card stack-gap">
+              <div class="section-head">
+                <i class="ph-fill ph-user-plus section-head-icon"></i>
+                <div>
+                  <h2>Registrar Nuevo Lector</h2>
+                  <p class="section-subtitle">Captura datos básicos para habilitar el acceso al escaneo.</p>
+                </div>
+              </div>
+              <form id="lectorForm" class="grid-form two-cols lectores-form">
+                <input name="nombre" type="text" placeholder="Nombre" required />
+                <input name="email" type="email" placeholder="Email" required />
+                <input name="pin" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN (6 dígitos)" required />
+                <select name="rol">
+                  <option value="lector">Lector</option>
+                  <option value="supervisor">Supervisor</option>
+                </select>
+                <label class="checkbox-row"><input name="activo" type="checkbox" checked />Activo</label>
+                <button class="btn btn-primary lector-submit-btn" type="submit">Crear lector</button>
+              </form>
+            </section>
+
+            <section class="card stack-gap">
+              <div class="section-head">
+                <i class="ph-fill ph-magnifying-glass section-head-icon"></i>
+                <div>
+                  <h2>Lectores Registrados</h2>
+                  <p class="section-subtitle">Consulta, filtra y edita lectores activos del evento actual.</p>
+                </div>
+              </div>
+              <form id="lectoresFilterForm" class="inline-form lectores-filter-form">
+                <input id="lectoresSearch" type="text" placeholder="Buscar por nombre, email o PIN" />
+                <button class="btn btn-secondary" type="submit">Buscar</button>
+              </form>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Email</th>
+                      <th>Rol</th>
+                      <th>PIN</th>
+                      <th>Habilitado</th>
+                      <th>Conexión</th>
+                      <th>Último ping</th>
+                      <th>Más</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lectoresBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="view-lector-qr" class="view-section hidden">
+          <div class="content-narrow stack-gap">
+            <section class="card stack-gap">
+              <div class="section-head">
+                <i class="ph-fill ph-scan section-head-icon"></i>
+                <div>
+                  <h2>Lector QR Integrado</h2>
+                  <p class="section-subtitle">Opera como lector sin salir del panel. Si ya eres admin, entra sin PIN.</p>
+                </div>
+              </div>
+              <div class="lector-embed-wrap">
+                <iframe
+                  id="adminLectorFrame"
+                  class="lector-embed-frame"
+                  src="{{ url_for('lector') }}"
+                  title="Lector QR integrado"
+                  loading="lazy"
+                  allow="camera *"
+                  referrerpolicy="same-origin"
+                ></iframe>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="view-reportes" class="view-section hidden">
+          <section class="metrics-grid metric-grid-reportes">
+            <article class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon icon-green"><i class="ph-fill ph-arrow-down-left"></i></div>
+                <span class="metric-title">Entradas Totales</span>
+              </div>
+              <div class="metric-value" id="rpEntradas">0</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon icon-orange"><i class="ph-fill ph-arrow-up-right"></i></div>
+                <span class="metric-title">Salidas Totales</span>
+              </div>
+              <div class="metric-value" id="rpSalidas">0</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon icon-purple"><i class="ph-fill ph-buildings"></i></div>
+                <span class="metric-title">Capacidad Total</span>
+              </div>
+              <div class="metric-value" id="rpAforoTotal">0</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon icon-blue"><i class="ph-fill ph-chart-line-up"></i></div>
+                <span class="metric-title">Capacidad Utilizada</span>
+              </div>
+              <div class="metric-value" id="rpAforoUsado">0</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon icon-green"><i class="ph-fill ph-check-circle"></i></div>
+                <span class="metric-title">Capacidad Disponible</span>
+              </div>
+              <div class="metric-value" id="rpDisponible">0</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-header">
+                <div class="metric-icon icon-purple"><i class="ph-fill ph-activity"></i></div>
+                <span class="metric-title">Movimientos</span>
+              </div>
+              <div class="metric-value" id="rpMovimientos">0</div>
+            </article>
+          </section>
+
+          <section class="card stack-gap">
+            <h2>Reporte del Evento</h2>
+            <p id="reportExportHint" class="section-subtitle">Puedes exportar en cualquier momento. Durante el evento se genera un corte al momento.</p>
+            <form id="reportFilterForm" class="report-actions">
+              <button class="btn btn-outline" type="button" id="reportExportCsv"><i class="ph-bold ph-file-csv"></i> CSV (Corte al momento)</button>
+              <button class="btn btn-outline" type="button" id="reportExportPdf"><i class="ph-bold ph-file-pdf"></i> PDF (Corte al momento)</button>
+            </form>
+            <div class="table-wrap report-table-wrap">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Movimiento</th>
+                    <th>Cantidad</th>
+                    <th>Nombre</th>
+                    <th>Modo</th>
+                  </tr>
+                </thead>
+                <tbody id="reportesBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-debug-qrs" class="view-section hidden">
+          <div class="content-wrapper stack-gap">
+            <section class="card stack-gap">
+              <div class="section-head">
+                <i class="ph-fill ph-bug section-head-icon"></i>
+                <div>
+                  <h2>Debug QRs de Estudiantes</h2>
+                  <p class="section-subtitle">Visualiza y busca rápidamente todos los códigos QR para pruebas.</p>
+                </div>
+              </div>
+              <form class="inline-form" id="debugQrsFilterForm" onsubmit="event.preventDefault()">
+                <input id="debugQrsSearch" type="text" placeholder="Buscar por ID o Nombre..." style="flex:1;" />
+                <button class="btn btn-secondary" type="button" id="debugQrsRefreshBtn"><i class="ph ph-arrows-clockwise"></i> Recargar</button>
+              </form>
+              <div id="debugQrsLoading" style="text-align:center; padding: 20px; color: var(--text-secondary);">Cargando códigos QR...</div>
+              <div class="qr-grid" id="debugQrsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="inviteModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="inviteModalTitle">
+      <div class="modal-card">
+        <h2 id="inviteModalTitle">Nuevo Invitado</h2>
+        <form class="modal-form" id="inviteModalForm">
+          <label for="nombre">Nombre</label>
+          <input id="nombre" name="nombre" type="text" required />
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required />
+
+          <label for="cuenta">ID/Número Cuenta</label>
+          <input id="cuenta" name="id" type="text" required />
+
+          <label class="checkbox-row">
+            <input name="invitacion_enviada" type="checkbox" checked />
+            Enviar invitación inmediatamente por correo
+          </label>
+
+          <div class="modal-actions">
+            <button type="button" id="closeInviteModal" class="btn btn-muted">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="editInviteModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editInviteModalTitle">
+      <div class="modal-card">
+        <h2 id="editInviteModalTitle">Editar Invitado</h2>
+        <form class="modal-form" id="editInviteForm">
+          <input id="editInviteKey" name="key" type="hidden" />
+          <label for="editNombre">Nombre</label>
+          <input id="editNombre" name="nombre" type="text" required />
+
+          <label for="editEmail">Email</label>
+          <input id="editEmail" name="email" type="email" required />
+
+          <label for="editCuenta">ID/Número Cuenta</label>
+          <input id="editCuenta" name="id" type="text" required />
+
+          <label for="editCupo">Cupo Total</label>
+          <input id="editCupo" name="cupo_total" type="number" min="3" value="3" required />
+
+          <div class="modal-actions">
+            <button type="button" id="closeEditInviteModal" class="btn btn-muted">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="editLectorModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editLectorModalTitle">
+      <div class="modal-card">
+        <h2 id="editLectorModalTitle">Editar Lector</h2>
+        <form class="modal-form" id="editLectorForm">
+          <input name="uid" type="hidden" />
+
+          <label for="editLectorNombre">Nombre</label>
+          <input id="editLectorNombre" name="nombre" type="text" required />
+
+          <label for="editLectorEmail">Email</label>
+          <input id="editLectorEmail" name="email" type="email" required />
+
+          <label for="editLectorPin">PIN</label>
+          <input id="editLectorPin" name="pin" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" required />
+
+          <label for="editLectorRol">Rol</label>
+          <select id="editLectorRol" name="rol">
+            <option value="lector">Lector</option>
+            <option value="supervisor">Supervisor</option>
+          </select>
+
+          <label class="checkbox-row">
+            <input name="activo" type="checkbox" />
+            Activo
+          </label>
+
+          <div class="modal-actions">
+            <button type="button" id="closeEditLectorModal" class="btn btn-muted">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+  </body>
+</html>

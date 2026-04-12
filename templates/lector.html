@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SIGA - Lector QR</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body class="lector-body">
+    <main class="lector-app">
+      <header class="lector-header">
+        <div>
+          <div class="mini-brand">SIGA</div>
+          <small id="eventoMeta">Evento SIGA</small>
+          <small id="lectorMeta">Lector: sin sesión</small>
+        </div>
+        <div class="header-status">
+          <span class="status-dot online" id="connectionDot"></span>
+          <span id="connectionText">Nube</span>
+          <strong id="aforoHeader">0/0</strong>
+        </div>
+      </header>
+
+      <section class="camera-stage" id="cameraStage">
+        <video id="video" autoplay playsinline></video>
+        <div class="camera-mask"></div>
+        <div class="scan-frame"></div>
+
+        <div id="processingOverlay" class="overlay hidden">
+          <div class="overlay-card">
+            <div class="spinner"></div>
+            <p>Validando invitaciones...</p>
+            <small id="phaseText">PDI Fase: Analizando</small>
+          </div>
+        </div>
+
+        <div id="resultModal" class="result-modal hidden"></div>
+      </section>
+
+      <section class="guest-panel" id="guestPanel">
+        <div id="guestInfo" class="guest-info">
+          <p class="placeholder-text">Enfoca un código QR para escanear</p>
+        </div>
+        <div class="guest-actions-row">
+          <button id="btnPlusOne" class="btn btn-primary" type="button" disabled>+1</button>
+          <button id="btnPlusTwo" class="btn btn-primary" type="button" disabled>+2</button>
+          <button id="btnAll" class="btn btn-primary" type="button" disabled>Todos</button>
+        </div>
+        <button id="btnCancelGuest" class="btn btn-outline btn-block hidden" type="button" style="margin-top: 8px;">Descartar escaneo</button>
+      </section>
+
+      <footer class="lector-footer">
+        <div class="footer-row">
+          <button id="btnStart" class="btn btn-muted" type="button">Pausar camara</button>
+          <button id="btnFlash" class="btn btn-muted" type="button" disabled>Flash</button>
+        </div>
+      </footer>
+
+      <canvas id="canvas" hidden></canvas>
+
+      <div id="pinLoginModal" class="overlay">
+        <div class="overlay-card login-card">
+          <h3>Ingresar PIN de lector</h3>
+          <div class="stack-gap">
+            <p class="pin-help">Captura tu PIN de 6 dígitos</p>
+            <div id="lectorPinGrid" class="pin-grid" role="group" aria-label="PIN de 6 dígitos">
+              <input class="pin-digit" data-pin-digit="0" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" />
+              <input class="pin-digit" data-pin-digit="1" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+              <input class="pin-digit" data-pin-digit="2" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+              <input class="pin-digit" data-pin-digit="3" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+              <input class="pin-digit" data-pin-digit="4" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+              <input class="pin-digit" data-pin-digit="5" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+            </div>
+            <button id="lectorPinLoginBtn" class="btn btn-primary" type="button">Entrar al lector</button>
+            <p id="lectorPinError" class="error-text hidden"></p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/lector.js') }}"></script>
+  </body>
+</html>

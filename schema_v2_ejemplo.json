@@ -1,0 +1,136 @@
+{
+  "configuracion": {
+    "evento_actual": {
+      "id_evento": "ev_2026_graduacion",
+      "nombre": "Evento SIGA 2026",
+      "aforo_max": 200,
+      "aforo_actual": 0,
+      "ubicacion": "Auditorio Principal",
+      "estado": "activo",
+      "fecha_inicio": "2026-04-11T10:00:00-06:00",
+      "fecha_fin": "2026-04-11T22:00:00-06:00",
+      "timezone": "America/Mexico_City",
+      "modo_operacion": "hibrido",
+      "umbral_alerta_aforo": 90,
+      "permitir_reingreso": false,
+      "max_por_escaneo": "todos",
+      "requiere_validacion_admin": false,
+      "salt_secreto": "siga_secret_key_2026"
+    },
+    "seguridad": {
+      "hash_algoritmo": "sha512",
+      "version_qr": "v2"
+    }
+  },
+  "eventos": {
+    "ev_2026_graduacion": {
+      "id_evento": "ev_2026_graduacion",
+      "nombre": "Evento SIGA 2026",
+      "ubicacion": "Auditorio Principal",
+      "aforo_max": 200,
+      "estado": "activo",
+      "fecha_inicio": "2026-04-11T10:00:00-06:00",
+      "fecha_fin": "2026-04-11T22:00:00-06:00",
+      "timezone": "America/Mexico_City",
+      "created_at": "2026-04-11T15:00:00Z"
+    },
+    "ev_2026_cena": {
+      "id_evento": "ev_2026_cena",
+      "nombre": "Cena de Gala SIGA",
+      "ubicacion": "Salón Norte",
+      "aforo_max": 120,
+      "estado": "borrador",
+      "fecha_inicio": "2026-04-12T20:00:00-06:00",
+      "fecha_fin": "2026-04-12T23:30:00-06:00",
+      "timezone": "America/Mexico_City",
+      "created_at": "2026-04-11T15:10:00Z"
+    }
+  },
+  "invitados": {
+    "88ca9254d4d7f416867f8569ed876243838bd1dd68a6bd6878eff9ae326e76dadece53f6a4bc08ba4a646e1584362b38f2b4e91b31d42ef483244bb2d5165a85": {
+      "id": "20240001",
+      "nombre": "Juan Pérez",
+      "nombre_lider": "Juan Pérez",
+      "email": "juan@example.com",
+      "grupo_nombre": "Familia Pérez",
+      "tipo_invitado": "general",
+      "cupo_total": 4,
+      "cupo_usado": 0,
+      "status": "fuera",
+      "invitacion_enviada": true,
+      "bloqueado": false,
+      "creado_en": "2026-04-11T15:20:00Z"
+    },
+    "4a323e8b1a72cb21ed6fe430e83d325072abc3728f345880a6cafd76859918288ab2274a98a09e0190786b3c6beb2fcea324dbed35d11d9275a32210b49fde1a": {
+      "id": "20240002",
+      "nombre": "María García",
+      "nombre_lider": "María García",
+      "email": "maria@example.com",
+      "grupo_nombre": "Invitados VIP",
+      "tipo_invitado": "vip",
+      "cupo_total": 1,
+      "cupo_usado": 0,
+      "status": "fuera",
+      "invitacion_enviada": false,
+      "bloqueado": false,
+      "creado_en": "2026-04-11T15:21:00Z"
+    }
+  },
+  "logs": {
+    "-OexampleLog0001": {
+      "evento": "ingreso_registrado",
+      "invitado_id": "20240001",
+      "nombre_invitado": "Juan Pérez",
+      "timestamp": "2026-04-11T18:00:00Z",
+      "cantidad_entrada": 2,
+      "fase_pdi": "Gris",
+      "modo": "nube",
+      "modo_conexion": "nube",
+      "sincronizado": true,
+      "staff_uid": "uid_staff_2",
+      "dispositivo_id": "android_norte_01",
+      "resultado": "valido"
+    },
+    "-OexampleLog0002": {
+      "evento": "ingreso_registrado",
+      "invitado_id": "20240001",
+      "nombre_invitado": "Juan Pérez",
+      "timestamp": "2026-04-11T18:05:00Z",
+      "cantidad_entrada": 1,
+      "fase_pdi": "Adaptativo",
+      "modo": "local",
+      "modo_conexion": "local",
+      "sincronizado": false,
+      "staff_uid": "uid_staff_2",
+      "dispositivo_id": "android_norte_01",
+      "resultado": "valido"
+    }
+  },
+  "usuarios_staff": {
+    "uid_staff_1": {
+      "nombre": "Admin Central",
+      "rol": "admin",
+      "email": "admin@siga.com",
+      "activo": true,
+      "ultimo_login": "2026-04-11T17:45:00Z",
+      "permisos": {
+        "gestionar_invitados": true,
+        "gestionar_eventos": true,
+        "ver_reportes": true,
+        "editar_configuracion": true
+      }
+    },
+    "uid_staff_2": {
+      "nombre": "Portería Norte",
+      "rol": "lector",
+      "email": "staff1@siga.com",
+      "activo": true,
+      "ultimo_login": "2026-04-11T17:50:00Z",
+      "permisos": {
+        "escanear": true,
+        "registrar_ingreso": true,
+        "ver_reportes": false
+      }
+    }
+  }
+}
