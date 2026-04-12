@@ -14,12 +14,32 @@ load_dotenv()
 import firebase
 import sync
 
+IS_SERVERLESS = os.getenv("VERCEL") == "1" or os.getenv("AWS_LAMBDA_FUNCTION_NAME") is not None
+IS_PRODUCTION = os.getenv("APP_ENV", "").strip().lower() == "production" or IS_SERVERLESS
+
+
+def _require_non_default_env(var_name, forbidden_values):
+    value = os.getenv(var_name, "").strip()
+    if IS_PRODUCTION and (not value or value in forbidden_values):
+        raise RuntimeError(f"Variable requerida/insegura en producción: {var_name}")
+    return value
+
+
+def _validate_runtime_env():
+    _require_non_default_env("FLASK_SECRET_KEY", {"cambia-esta-clave-en-produccion"})
+    _require_non_default_env("QR_SALT_SECRETO", {"CAMBIA_ESTE_SALT"})
+    _require_non_default_env("ADMIN_PASSWORD", {"admin123"})
+    _require_non_default_env("FIREBASE_DB_URL", {""})
+
+
+_validate_runtime_env()
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "cambia-esta-clave-en-produccion")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
 )
 
 import rutas
@@ -27,7 +47,6 @@ app.register_blueprint(rutas.rutas_bp)
 
 _runtime_initialized = False
 _sync_thread_started = False
-IS_SERVERLESS = os.getenv("VERCEL") == "1" or os.getenv("AWS_LAMBDA_FUNCTION_NAME") is not None
 
 
 def bootstrap_runtime(start_sync_worker = False):

@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime, timezone
 import firebase_admin
 from firebase_admin import credentials, db
@@ -8,7 +9,29 @@ import sync
 firebase_ready = False
 FIREBASE_DB_URL = os.getenv("FIREBASE_DB_URL", "")
 FIREBASE_CRED_PATH = os.getenv("FIREBASE_CRED_PATH", "firebase-service-account.json")
+FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON", "").strip()
 MIN_CUPO_TOTAL = 3
+
+
+def _resolve_firebase_credentials():
+    if FIREBASE_CREDENTIALS_JSON:
+        try:
+            cred_info = json.loads(FIREBASE_CREDENTIALS_JSON)
+            if isinstance(cred_info, dict):
+                return credentials.Certificate(cred_info)
+            print("[WARN] FIREBASE_CREDENTIALS_JSON no es un objeto JSON válido.")
+        except Exception as exc:
+            print(f"[WARN] No se pudo parsear FIREBASE_CREDENTIALS_JSON: {exc}")
+
+    if not os.path.exists(FIREBASE_CRED_PATH):
+        print(f"[WARN] No existe archivo de credenciales: {FIREBASE_CRED_PATH}")
+        return None
+
+    try:
+        return credentials.Certificate(FIREBASE_CRED_PATH)
+    except Exception as exc:
+        print(f"[WARN] No se pudo cargar FIREBASE_CRED_PATH: {exc}")
+        return None
 
 def init_firebase():
     global firebase_ready
@@ -18,14 +41,13 @@ def init_firebase():
         firebase_ready = False
         return
 
-    if not os.path.exists(FIREBASE_CRED_PATH):
-        print(f"[WARN] No existe archivo de credenciales: {FIREBASE_CRED_PATH}")
+    cred = _resolve_firebase_credentials()
+    if cred is None:
         firebase_ready = False
         return
 
     try:
         if not firebase_admin._apps:
-            cred = credentials.Certificate(FIREBASE_CRED_PATH)
             firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
         firebase_ready = True
         print("[OK] Firebase inicializado.")

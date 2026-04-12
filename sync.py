@@ -8,7 +8,6 @@ import funciones_extras
 PENDIENTES_FILE = os.getenv("PENDIENTES_FILE", "pendientes.json")
 IS_SERVERLESS = os.getenv("VERCEL") == "1" or os.getenv("AWS_LAMBDA_FUNCTION_NAME") is not None
 sync_meta = {"last_attempt": None, "last_success": None, "last_error": None}
-_pendientes_mem = []
 
 def ensure_pendientes_file():
     if IS_SERVERLESS:
@@ -19,7 +18,7 @@ def ensure_pendientes_file():
 
 def leer_pendientes():
     if IS_SERVERLESS:
-        return list(_pendientes_mem)
+        return []
     ensure_pendientes_file()
     with open(PENDIENTES_FILE, "r", encoding="utf-8") as f:
         try:
@@ -29,9 +28,7 @@ def leer_pendientes():
             return []
 
 def escribir_pendientes(data):
-    global _pendientes_mem
     if IS_SERVERLESS:
-        _pendientes_mem = data if isinstance(data, list) else []
         return
     with open(PENDIENTES_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -47,19 +44,21 @@ def guardar_log(evento):
         except Exception as exc:
             print(f"[WARN] Fallo guardando en Firebase, se encola: {exc}")
 
-    if True:  # Lock quitado para simplificar
-        pendientes = leer_pendientes()
-        evento["sincronizado"] = False
-        pendientes.append(evento)
-        escribir_pendientes(pendientes)
+    if IS_SERVERLESS:
+        print("[WARN] Firebase no disponible en serverless; no se persiste cola offline.")
+        return
+
+    pendientes = leer_pendientes()
+    evento["sincronizado"] = False
+    pendientes.append(evento)
+    escribir_pendientes(pendientes)
 
 def sincronizar_pendientes():
     stats = {"processed": 0, "synced": 0, "failed": 0}
     if not firebase.firebase_ready:
         return stats
 
-    if True:  # Lock quitado para simplificar
-        pendientes = leer_pendientes()
+    pendientes = leer_pendientes()
 
     if not pendientes:
         return stats
@@ -83,8 +82,7 @@ def sincronizar_pendientes():
 
         actualizado.append(item)
 
-    if True:  # Lock quitado para simplificar
-        escribir_pendientes(actualizado)
+    escribir_pendientes(actualizado)
     return stats
 
 def worker_sincronizacion():
