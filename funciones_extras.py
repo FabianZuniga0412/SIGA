@@ -4,6 +4,8 @@ import tempfile
 import io
 import csv
 import time
+import re
+import unicodedata
 import yagmail
 import qrcode
 from datetime import datetime, timezone
@@ -349,6 +351,13 @@ def active_event_id_from_rows(rows):
 def normalizar_email(value):
     return str(value or "").strip().lower()
 
+
+def safe_filename_token(value):
+    text = str(value or "").strip().lower()
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+    return text or "sin_nombre"
+
 def enviar_invitacion_email(client, invitado, key_hash):
     invitado_id = normalizar_id(invitado.get("id"))
     nombre = invitado.get("nombre_lider") or invitado.get("nombre") or invitado_id
@@ -364,7 +373,8 @@ def enviar_invitacion_email(client, invitado, key_hash):
     img = qr.make_image(fill_color="black", back_color="white")
 
     temp_dir = tempfile.gettempdir()
-    qr_filename = os.path.join(temp_dir, f"qr_{invitado_id}_{int(time.time())}.png")
+    nombre_token = safe_filename_token(nombre)
+    qr_filename = os.path.join(temp_dir, f"qr_{invitado_id}_{nombre_token}.png")
     img.save(qr_filename)
 
     html_part1 = f"""
