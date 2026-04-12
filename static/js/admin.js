@@ -10,11 +10,6 @@ const opsAforoChip = document.getElementById("opsAforoChip");
 const globalNotice = document.getElementById("globalNotice");
 const globalNoticeText = document.getElementById("globalNoticeText");
 const globalNoticeClose = document.getElementById("globalNoticeClose");
-const notificationBellBtn = document.getElementById("notificationBellBtn");
-const notificationCountBadge = document.getElementById("notificationCountBadge");
-const notificationsPanel = document.getElementById("notificationsPanel");
-const notificationsBody = document.getElementById("notificationsBody");
-const clearNotificationsBtn = document.getElementById("clearNotificationsBtn");
 
 const openInviteModalBtn = document.getElementById("openInviteModal");
 const closeInviteModalBtn = document.getElementById("closeInviteModal");
@@ -132,11 +127,6 @@ let lectoresState = {
   filters: { q: "" },
 };
 let lectorPortalLink = "";
-let notificationState = {
-  items: [],
-  unread: 0,
-  previousOnlineByKey: null,
-};
 let eventoConfigBaseSnapshot = "";
 let eventoConfigDirty = false;
 let eventoConfigSaving = false;
@@ -158,7 +148,6 @@ init();
 function init() {
   bindUI();
   setupLectorAccess();
-  renderNotifications();
   setView("dashboard");
   refreshAll();
   setInterval(refreshAll, 15000);
@@ -209,28 +198,6 @@ function bindUI() {
   });
   editLectorModal?.addEventListener("click", (event) => {
     if (event.target === editLectorModal) editLectorModal.classList.add("hidden");
-  });
-  notificationBellBtn?.addEventListener("click", (event) => {
-    event.stopPropagation();
-    const open = !notificationsPanel?.classList.contains("hidden");
-    if (open) {
-      notificationsPanel.classList.add("hidden");
-      return;
-    }
-    notificationsPanel?.classList.remove("hidden");
-    notificationState.unread = 0;
-    renderNotifications();
-  });
-  clearNotificationsBtn?.addEventListener("click", () => {
-    notificationState.items = [];
-    notificationState.unread = 0;
-    renderNotifications();
-  });
-  document.addEventListener("click", (event) => {
-    if (!notificationsPanel || notificationsPanel.classList.contains("hidden")) return;
-    if (notificationsPanel.contains(event.target)) return;
-    if (notificationBellBtn?.contains(event.target)) return;
-    notificationsPanel.classList.add("hidden");
   });
 
   inviteModalForm?.addEventListener("submit", async (event) => {
@@ -840,7 +807,6 @@ function renderDashboard(data) {
           .join("")
       : '<tr><td colspan="4" class="empty-row">Sin lectores activos</td></tr>';
 
-    updateReaderDisconnectNotifications(detalle);
   }
 
   subheaderStatus.textContent = data.firebase_ready
@@ -862,77 +828,6 @@ function renderDashboard(data) {
         })
         .join("")
     : '<tr><td colspan="5" class="empty-row">Sin ingresos registrados aún</td></tr>';
-}
-
-function updateReaderDisconnectNotifications(detalle) {
-  const currentMap = {};
-  (detalle || []).forEach((row) => {
-    const staffId = String(row?.staff_id || "").trim();
-    const deviceId = String(row?.device_id || "").trim();
-    const key = staffId ? `${staffId}::${deviceId || "na"}` : `device::${deviceId || "na"}`;
-    currentMap[key] = {
-      uid: staffId,
-      nombre: String(row?.nombre || staffId || deviceId || "Lector"),
-      device_id: deviceId,
-      last_seen: row?.timestamp || "",
-    };
-  });
-
-  const prev = notificationState.previousOnlineByKey;
-  if (prev) {
-    Object.keys(prev).forEach((key) => {
-      if (currentMap[key]) return;
-      const disconnected = prev[key];
-      addNotification({
-        type: "reader_disconnected",
-        title: "Lector desconectado",
-        message: `${disconnected.nombre} perdió conexión.`,
-      });
-    });
-  }
-  notificationState.previousOnlineByKey = currentMap;
-}
-
-function addNotification({ type, title, message, meta = "" }) {
-  if (type !== "reader_disconnected") return;
-  const item = {
-    id: `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    type,
-    title: String(title || "Notificación"),
-    message: String(message || ""),
-    meta: String(meta || ""),
-    timestamp: new Date().toISOString(),
-  };
-  notificationState.items.unshift(item);
-  notificationState.items = notificationState.items.slice(0, 40);
-  if (notificationsPanel?.classList.contains("hidden")) {
-    notificationState.unread += 1;
-  }
-  renderNotifications();
-}
-
-function renderNotifications() {
-  if (!notificationsBody || !notificationBellBtn || !notificationCountBadge) return;
-  const unread = Number(notificationState.unread || 0);
-  notificationBellBtn.classList.toggle("has-alert", unread > 0);
-  notificationCountBadge.classList.toggle("hidden", unread <= 0);
-  notificationCountBadge.textContent = String(Math.min(unread, 99));
-
-  if (!notificationState.items.length) {
-    notificationsBody.innerHTML = '<p class="notifications-empty">Sin notificaciones</p>';
-    return;
-  }
-
-  notificationsBody.innerHTML = notificationState.items
-    .map(
-      (x) => `<article class="notifications-item">
-      <strong>${escapeHtml(x.title)}</strong>
-      <span>${escapeHtml(x.message)}</span>
-      ${x.meta ? `<small>${escapeHtml(x.meta)}</small>` : ""}
-      <small>${escapeHtml(formatIso(x.timestamp) || x.timestamp)}</small>
-    </article>`
-    )
-    .join("");
 }
 
 function renderInvitados(rows) {

@@ -51,7 +51,7 @@ def admin():
 
 @rutas_bp.route("/")
 def home():
-    return redirect(url_for("rutas.lector"))
+    return redirect(url_for("rutas.admin"))
 
 @rutas_bp.route("/lector")
 def lector():

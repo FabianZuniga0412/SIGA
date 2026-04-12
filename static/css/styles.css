@@ -349,93 +349,6 @@ label, input, button, select {
   gap: 16px;
   position: relative;
 }
-.header-bell {
-  background: var(--surface);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: var(--text-secondary);
-  font-size: 20px;
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  border: 1px solid var(--border);
-  position: relative;
-}
-.header-bell.has-alert {
-  color: var(--primary);
-  border-color: #c7d2fe;
-  background: #eef2ff;
-}
-
-.notification-count {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  padding: 0 5px;
-  background: var(--error);
-  color: #fff;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.notifications-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 10px);
-  width: min(420px, 90vw);
-  max-height: 360px;
-  overflow: hidden;
-  border: 1px solid var(--border-dark);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-  z-index: 30;
-}
-
-.notifications-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.notifications-body {
-  max-height: 300px;
-  overflow: auto;
-  padding: 8px;
-  display: grid;
-  gap: 8px;
-}
-
-.notifications-item {
-  border: 1px solid var(--border-dark);
-  border-radius: var(--radius-sm);
-  padding: 10px;
-  background: #fff;
-  display: grid;
-  gap: 4px;
-}
-
-.notifications-item small {
-  color: var(--text-secondary);
-}
-
-.notifications-empty {
-  color: var(--text-secondary);
-  font-size: 14px;
-  text-align: center;
-  padding: 20px;
-}
 
 /* Layout Grid */
 .dashboard-layout-main {
@@ -617,26 +530,6 @@ label, input, button, select {
 }
 .sync-card .metric-title { margin-bottom: 4px; }
 .sync-card .metric-value { font-size: 20px; margin-bottom: 12px; }
-.sync-illlustration {
-  position: absolute;
-  top: 24px;
-  right: -10px;
-  font-size: 80px;
-  opacity: 0.3;
-}
-.sync-illustration-check {
-  position: absolute;
-  right: 20px;
-  top: 80px;
-  background: var(--success);
-  color: white;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-}
 
 /* Table styling */
 .table-header {
@@ -1263,17 +1156,6 @@ tbody tr:hover td {
     font-size: 13px;
     padding: 10px 12px;
     margin-right: auto;
-  }
-  .header-bell {
-    margin-left: auto;
-  }
-  .notifications-panel {
-    right: 0;
-    left: auto;
-    width: min(420px, calc(100vw - 24px));
-    max-width: calc(100vw - 24px);
-    top: calc(100% + 8px);
-    max-height: min(62vh, 420px);
   }
   .view-section,
   .card {
