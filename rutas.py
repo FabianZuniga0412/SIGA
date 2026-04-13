@@ -260,7 +260,7 @@ def api_sync_retry():
         return jsonify({"ok": False, "error": "No autorizado"}), 401
     sync.sync_meta["last_attempt"] = funciones_extras.now_iso()
     try:
-        stats = sincronizar_pendientes()
+        stats = sync.sincronizar_pendientes()
         if stats.get("failed", 0) == 0:
             sync.sync_meta["last_success"] = funciones_extras.now_iso()
             sync.sync_meta["last_error"] = None
@@ -353,7 +353,7 @@ def api_actualizar_invitado(invitado_key):
 
     body = request.get_json(silent=True) or {}
     candidato = dict(actual)
-    allowed_inline = {"nombre", "nombre_lider", "email", "cupo_total", "tipo_invitado", "bloqueado"}
+    allowed_inline = {"nombre", "nombre_lider", "email", "cupo_total", "tipo_invitado"}
     has_change = False
     for field in allowed_inline:
         if field in body:
@@ -373,7 +373,6 @@ def api_actualizar_invitado(invitado_key):
         "email": payload["email"],
         "cupo_total": payload["cupo_total"],
         "tipo_invitado": payload["tipo_invitado"],
-        "bloqueado": payload["bloqueado"],
     }
     firebase.db.reference(f"invitados/{invitado_key}").update(update)
     return jsonify({"ok": True, "updated": update})
@@ -439,14 +438,12 @@ def api_importar_invitados():
 
     for idx, row in enumerate(rows, start=2):
         row_data = {
-            "id": funciones_extras.get_col(row, "id", "ID", "Id"),
-            "nombre": funciones_extras.get_col(row, "nombre", "Nombre", "nombre_lider", "Nombre_lider"),
-            "email": funciones_extras.get_col(row, "email", "Email", "correo", "Correo"),
+            "id": get_col(row, "id", "ID", "Id"),
+            "nombre": get_col(row, "nombre", "Nombre", "nombre_lider", "Nombre_lider"),
+            "email": get_col(row, "email", "Email", "correo", "Correo"),
             # En importación también se crea con cupo base fijo.
             "cupo_total": funciones_extras.MIN_CUPO_TOTAL,
             "tipo_invitado": row.get("tipo_invitado", "general"),
-            "grupo_nombre": row.get("grupo_nombre", ""),
-            "bloqueado": funciones_extras.parse_bool_param(str(row.get("bloqueado", ""))) is True,
             "invitacion_enviada": funciones_extras.parse_bool_param(str(row.get("invitacion_enviada", ""))) is True,
         }
 
@@ -511,7 +508,7 @@ def api_invitados_batch():
     keys = data.get("keys") or []
     filters = data.get("filters") or {}
 
-    if action not in {"bloquear", "desbloquear", "enviar_invitacion", "exportar"}:
+    if action not in {"enviar_invitacion", "exportar"}:
         return jsonify({"ok": False, "error": "Acción inválida"}), 400
     if scope not in {"selected", "filtered"}:
         return jsonify({"ok": False, "error": "Scope inválido"}), 400
@@ -525,18 +522,12 @@ def api_invitados_batch():
         if scope == "selected":
             return jsonify({"ok": True, "export_url": f"/api/invitados/export?{urlencode({'keys': ','.join(target_keys)})}"})
         params = {}
-        for k in ("q", "bloqueado", "pendiente", "tipo"):
+        for k in ("q", "pendiente", "tipo"):
             v = str(filters.get(k, "")).strip()
             if v:
                 params[k] = v
         query = urlencode(params)
         return jsonify({"ok": True, "export_url": f"/api/invitados/export?{query}"})
-
-    if action in {"bloquear", "desbloquear"}:
-        flag = action == "bloquear"
-        for key in target_keys:
-            firebase.db.reference(f"invitados/{key}").update({"bloqueado": flag})
-        return jsonify({"ok": True, "updated": len(target_keys), "action": action})
 
     # enviar_invitacion
     client, smtp_error = funciones_extras.smtp_client()

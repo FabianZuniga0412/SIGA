@@ -120,9 +120,7 @@ def invitados_listado(invitados):
                 "cupo_usado": min(cupo_usado, cupo_total),
                 "status": data.get("status", "fuera"),
                 "invitacion_enviada": bool(data.get("invitacion_enviada", False)),
-                "bloqueado": bool(data.get("bloqueado", False)),
                 "tipo_invitado": data.get("tipo_invitado", "general"),
-                "grupo_nombre": data.get("grupo_nombre", ""),
             }
         )
     return sorted(out, key=lambda x: x["id"] or x["key"])
@@ -451,7 +449,7 @@ def lector_session_data():
 def generar_csv_invitados(rows):
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["key", "id", "nombre", "email", "cupo_total", "cupo_usado", "tipo_invitado", "bloqueado", "invitacion_enviada", "status"])
+    writer.writerow(["key", "id", "nombre", "email", "cupo_total", "cupo_usado", "tipo_invitado", "invitacion_enviada", "status"])
     for row in rows:
         writer.writerow(
             [
@@ -462,7 +460,6 @@ def generar_csv_invitados(rows):
                 row.get("cupo_total", 0),
                 row.get("cupo_usado", 0),
                 row.get("tipo_invitado", ""),
-                bool(row.get("bloqueado", False)),
                 bool(row.get("invitacion_enviada", False)),
                 row.get("status", ""),
             ]
@@ -610,9 +607,7 @@ def validar_datos_invitado(
         "cupo_usado": max(safe_int(data.get("cupo_usado", 0), 0), 0),
         "status": data.get("status", "fuera"),
         "invitacion_enviada": bool(data.get("invitacion_enviada", False)),
-        "bloqueado": bool(data.get("bloqueado", False)),
         "tipo_invitado": str(data.get("tipo_invitado", "general")).strip().lower() or "general",
-        "grupo_nombre": str(data.get("grupo_nombre", "")).strip(),
     }
     payload["cupo_usado"] = min(payload["cupo_usado"], payload["cupo_total"])
     return payload, None
@@ -660,11 +655,11 @@ def invitados_indexes(invitados, exclude_key = None):
             email_index[email_norm] = key
     return id_index, email_index
 
-    def get_col(row, *keys):
-        for key in keys:
-            if key in row and row.get(key) not in (None, ""):
-                return row.get(key)
-        return ""
+def get_col(row, *keys):
+    for key in keys:
+        if key in row and row.get(key) not in (None, ""):
+            return row.get(key)
+    return ""
 
 def lector_logout_session():
     session.pop("lector_auth", None)
@@ -702,7 +697,7 @@ def parse_timestamp(value):
         return datetime.min.replace(tzinfo=timezone.utc)
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
-def aplicar_filtros_invitados(rows, q = "", bloqueado = None, pendiente = None, tipo = ""):
+def aplicar_filtros_invitados(rows, q = "", pendiente = None, tipo = ""):
     qn = (q or "").strip().lower()
     tipo_n = (tipo or "").strip().lower()
     out = []
@@ -711,8 +706,6 @@ def aplicar_filtros_invitados(rows, q = "", bloqueado = None, pendiente = None, 
             searchable = f"{row.get('id','')} {row.get('nombre','')} {row.get('email','')}".lower()
             if qn not in searchable:
                 continue
-        if bloqueado is not None and bool(row.get("bloqueado")) != bloqueado:
-            continue
         is_pendiente = safe_int(row.get("cupo_usado"), 0) < safe_int(row.get("cupo_total"), 0)
         if pendiente is not None and is_pendiente != pendiente:
             continue
@@ -788,7 +781,6 @@ def filtrar_y_paginar_invitados(invitados, query_args, paginate = True):
     filtered = aplicar_filtros_invitados(
         rows,
         q=str(query_args.get("q", "") or ""),
-        bloqueado=parse_bool_param(query_args.get("bloqueado")),
         pendiente=parse_bool_param(query_args.get("pendiente")),
         tipo=str(query_args.get("tipo", "") or ""),
     )

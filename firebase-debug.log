@@ -1,0 +1,98 @@
+[debug] [2026-04-12T21:56:11.673Z] ----------------------------------------------------------------------
+[debug] [2026-04-12T21:56:11.675Z] Command:       /opt/homebrew/Cellar/node/25.8.1_1/bin/node /opt/homebrew/bin/firebase projects:list --json
+[debug] [2026-04-12T21:56:11.675Z] CLI Version:   15.11.0
+[debug] [2026-04-12T21:56:11.675Z] Platform:      darwin
+[debug] [2026-04-12T21:56:11.675Z] Node Version:  v25.8.1
+[debug] [2026-04-12T21:56:11.675Z] Time:          Sun Apr 12 2026 15:56:11 GMT-0600 (Central Standard Time)
+[debug] [2026-04-12T21:56:11.675Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-12T21:56:11.676Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-04-12T21:56:11.696Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-12T21:56:11.696Z] > authorizing via signed-in user (leonzerkerker_99@hotmail.com)
+[debug] [2026-04-12T21:56:11.697Z] Checked if tokens are valid: false, expires at: 1775978871065
+[debug] [2026-04-12T21:56:11.697Z] Checked if tokens are valid: false, expires at: 1775978871065
+[debug] [2026-04-12T21:56:11.697Z] > refreshing access token with scopes: []
+[debug] [2026-04-12T21:56:11.698Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-04-12T21:56:11.698Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-04-12T21:56:11.817Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-04-12T21:56:11.817Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-04-12T21:56:11.833Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-04-12T21:56:11.833Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-04-12T21:56:11.843Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-04-12T21:56:12.122Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-04-12T21:56:12.122Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] ┌──────────────────────┬────────────────┬────────────────┬──────────────────────┐
+│ Project Display Name │ Project ID     │ Project Number │ Resource Location ID │
+├──────────────────────┼────────────────┼────────────────┼──────────────────────┤
+│ Daily Stamp          │ daily-postmark │ 744431967367   │ [Not specified]      │
+├──────────────────────┼────────────────┼────────────────┼──────────────────────┤
+│ PDI-SIGA             │ pdi-siga       │ 1068999977433  │ [Not specified]      │
+├──────────────────────┼────────────────┼────────────────┼──────────────────────┤
+│ SIGA                 │ siga-b6be7     │ 525360387965   │ [Not specified]      │
+└──────────────────────┴────────────────┴────────────────┴──────────────────────┘
+[info] 
+[info] 3 project(s) total.
+[debug] [2026-04-12T21:56:31.073Z] ----------------------------------------------------------------------
+[debug] [2026-04-12T21:56:31.079Z] Command:       /opt/homebrew/Cellar/node/25.8.1_1/bin/node /opt/homebrew/bin/firebase use siga-b6be7
+[debug] [2026-04-12T21:56:31.080Z] CLI Version:   15.11.0
+[debug] [2026-04-12T21:56:31.080Z] Platform:      darwin
+[debug] [2026-04-12T21:56:31.080Z] Node Version:  v25.8.1
+[debug] [2026-04-12T21:56:31.080Z] Time:          Sun Apr 12 2026 15:56:31 GMT-0600 (Central Standard Time)
+[debug] [2026-04-12T21:56:31.080Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-12T21:56:31.083Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-12T21:56:31.084Z] > authorizing via signed-in user (leonzerkerker_99@hotmail.com)
+[error] 
+[error] Error: firebase use must be run from a Firebase project directory.
+
+Run firebase init to start a project directory in the current folder.
+[debug] [2026-04-12T21:56:40.786Z] ----------------------------------------------------------------------
+[debug] [2026-04-12T21:56:40.789Z] Command:       /opt/homebrew/Cellar/node/25.8.1_1/bin/node /opt/homebrew/bin/firebase database:instances:list --project siga-b6be7 --json
+[debug] [2026-04-12T21:56:40.789Z] CLI Version:   15.11.0
+[debug] [2026-04-12T21:56:40.789Z] Platform:      darwin
+[debug] [2026-04-12T21:56:40.789Z] Node Version:  v25.8.1
+[debug] [2026-04-12T21:56:40.789Z] Time:          Sun Apr 12 2026 15:56:40 GMT-0600 (Central Standard Time)
+[debug] [2026-04-12T21:56:40.789Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-12T21:56:41.494Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-12T21:56:41.495Z] > authorizing via signed-in user (leonzerkerker_99@hotmail.com)
+[debug] [2026-04-12T21:56:41.495Z] [iam] checking project siga-b6be7 for permissions ["firebase.projects.get","firebasedatabase.instances.list"]
+[debug] [2026-04-12T21:56:41.495Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:56:41.495Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:56:41.496Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions [none]
+[debug] [2026-04-12T21:56:41.496Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions  x-goog-user-project=siga-b6be7
+[debug] [2026-04-12T21:56:41.496Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.list"]}
+[debug] [2026-04-12T21:56:41.811Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions 200
+[debug] [2026-04-12T21:56:41.811Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.list"]}
+[debug] [2026-04-12T21:56:41.812Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:56:41.812Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:56:41.813Z] >>> [apiv2][query] GET https://firebasedatabase.googleapis.com/v1beta/projects/siga-b6be7/locations/-/instances pageSize=100
+[debug] [2026-04-12T21:56:42.320Z] <<< [apiv2][status] GET https://firebasedatabase.googleapis.com/v1beta/projects/siga-b6be7/locations/-/instances 200
+[debug] [2026-04-12T21:56:42.320Z] <<< [apiv2][body] GET https://firebasedatabase.googleapis.com/v1beta/projects/siga-b6be7/locations/-/instances {"instances":[{"name":"projects/525360387965/locations/us-central1/instances/siga-b6be7-default-rtdb","project":"projects/525360387965","databaseUrl":"https://siga-b6be7-default-rtdb.firebaseio.com","type":"DEFAULT_DATABASE","state":"ACTIVE"}]}
+[info] siga-b6be7-default-rtdb
+[info] Project siga-b6be7 has 1 database instances
+[debug] [2026-04-12T21:59:33.167Z] ----------------------------------------------------------------------
+[debug] [2026-04-12T21:59:33.169Z] Command:       /opt/homebrew/Cellar/node/25.8.1_1/bin/node /opt/homebrew/bin/firebase database:instances:list --project siga-b6be7 --json
+[debug] [2026-04-12T21:59:33.169Z] CLI Version:   15.11.0
+[debug] [2026-04-12T21:59:33.169Z] Platform:      darwin
+[debug] [2026-04-12T21:59:33.169Z] Node Version:  v25.8.1
+[debug] [2026-04-12T21:59:33.169Z] Time:          Sun Apr 12 2026 15:59:33 GMT-0600 (Central Standard Time)
+[debug] [2026-04-12T21:59:33.169Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-12T21:59:33.782Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-12T21:59:33.783Z] > authorizing via signed-in user (leonzerkerker_99@hotmail.com)
+[debug] [2026-04-12T21:59:33.783Z] [iam] checking project siga-b6be7 for permissions ["firebase.projects.get","firebasedatabase.instances.list"]
+[debug] [2026-04-12T21:59:33.783Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:59:33.783Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:59:33.784Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions [none]
+[debug] [2026-04-12T21:59:33.784Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions  x-goog-user-project=siga-b6be7
+[debug] [2026-04-12T21:59:33.784Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.list"]}
+[debug] [2026-04-12T21:59:34.157Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions 200
+[debug] [2026-04-12T21:59:34.157Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/siga-b6be7:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.list"]}
+[debug] [2026-04-12T21:59:34.160Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:59:34.160Z] Checked if tokens are valid: true, expires at: 1776034570833
+[debug] [2026-04-12T21:59:34.161Z] >>> [apiv2][query] GET https://firebasedatabase.googleapis.com/v1beta/projects/siga-b6be7/locations/-/instances pageSize=100
+[debug] [2026-04-12T21:59:34.572Z] <<< [apiv2][status] GET https://firebasedatabase.googleapis.com/v1beta/projects/siga-b6be7/locations/-/instances 200
+[debug] [2026-04-12T21:59:34.573Z] <<< [apiv2][body] GET https://firebasedatabase.googleapis.com/v1beta/projects/siga-b6be7/locations/-/instances {"instances":[{"name":"projects/525360387965/locations/us-central1/instances/siga-b6be7-default-rtdb","project":"projects/525360387965","databaseUrl":"https://siga-b6be7-default-rtdb.firebaseio.com","type":"DEFAULT_DATABASE","state":"ACTIVE"}]}
+[info] siga-b6be7-default-rtdb
+[info] Project siga-b6be7 has 1 database instances

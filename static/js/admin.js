@@ -518,7 +518,7 @@ function bindUI() {
   goReportesBtn?.addEventListener("click", () => setView("reportes"));
 
   downloadTemplateBtn?.addEventListener("click", () => {
-    const csv = "id,nombre,email,grupo_nombre,invitacion_enviada\n20240001,Juan Perez,juan@example.com,Familia,true\n";
+    const csv = "id,nombre,email,invitacion_enviada\n20240001,Juan Perez,juan@example.com,true\n";
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

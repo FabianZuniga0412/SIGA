@@ -587,18 +587,6 @@ async function validateFrame(imagenBase64, showLoader = true) {
     const cupoTotal = Number(invitado.cupo_total || 1);
     const cupoUsado = Number(invitado.cupo_usado ?? invitado.ingresados ?? 0);
 
-    if (Boolean(invitado.bloqueado)) {
-      vibrate("error");
-      showResult({
-        type: "error",
-        title: "Acceso denegado",
-        message: "Invitado bloqueado por administracion.",
-        actionLabel: "Cerrar",
-      });
-      nextScanAt = Date.now() + 1200;
-      return;
-    }
-
     if (cupoUsado >= cupoTotal) {
       showGuestSnapshot({
         invitadoId: data.invitado_id,
