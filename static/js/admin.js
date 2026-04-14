@@ -358,15 +358,19 @@ function bindUI() {
 
   lectorForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const payload = formToObject(lectorForm);
-    payload.pin = String(payload.pin || "").replace(/\D/g, "").slice(0, 6);
-    payload.activo = !!lectorForm.elements.activo.checked;
-    await api("/api/usuarios_staff", { method: "POST", body: payload });
-    lectorForm.reset();
-    lectorForm.elements.activo.checked = true;
-    lectorForm.elements.rol.value = "lector";
-    await refreshAll();
-    showGlobalNotice("Lector registrado.", "success");
+    try {
+      const payload = formToObject(lectorForm);
+      payload.pin = String(payload.pin || "").replace(/\D/g, "").slice(0, 6);
+      payload.activo = !!lectorForm.elements.activo.checked;
+      await api("/api/usuarios_staff", { method: "POST", body: payload });
+      lectorForm.reset();
+      lectorForm.elements.activo.checked = true;
+      lectorForm.elements.rol.value = "lector";
+      await refreshAll();
+      showGlobalNotice("Lector registrado.", "success");
+    } catch (error) {
+      showGlobalNotice(`No se pudo crear lector: ${error.message}`, "error");
+    }
   });
 
   lectoresFilterForm?.addEventListener("submit", (event) => {

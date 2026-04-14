@@ -513,7 +513,20 @@ def reporte_pdf_bytes(data, desde, hasta):
     c.drawString(40, y, "Reporte SIGA")
     y -= 18
     c.setFont("Helvetica", 9)
-    c.drawString(40, y, f"Rango: {desde or 'inicio'} a {hasta or 'ahora'}")
+    cfg = firebase.evento_actual_config() or {}
+    evento_tz = str(cfg.get("timezone") or "America/Mexico_City").strip() or "America/Mexico_City"
+    try:
+        tzinfo = ZoneInfo(evento_tz)
+    except Exception:
+        tzinfo = datetime.now().astimezone().tzinfo
+
+    horario_desde = str(desde or cfg.get("fecha_inicio") or "").strip()
+    horario_hasta = str(hasta or cfg.get("fecha_fin") or "").strip()
+    horario_desde_dt = parse_timestamp(horario_desde)
+    horario_hasta_dt = parse_timestamp(horario_hasta)
+    horario_desde_txt = horario_desde_dt.astimezone(tzinfo).strftime("%Y-%m-%d %H:%M") if horario_desde_dt.year > 1900 else "inicio"
+    horario_hasta_txt = horario_hasta_dt.astimezone(tzinfo).strftime("%Y-%m-%d %H:%M") if horario_hasta_dt.year > 1900 else "actual"
+    c.drawString(40, y, f"Horario: {horario_desde_txt} a {horario_hasta_txt}")
     y -= 20
 
     c.setFont("Helvetica-Bold", 10)
@@ -534,7 +547,7 @@ def reporte_pdf_bytes(data, desde, hasta):
 
     y -= 6
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(40, y, "Detalle de movimientos (max 100)")
+    c.drawString(40, y, "Detalle de movimientos")
     y -= 14
     c.setFont("Helvetica-Bold", 8)
     c.drawString(40, y, "Hora")

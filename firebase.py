@@ -49,8 +49,10 @@ def init_firebase():
     try:
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
+        # Force an authenticated read so invalid/rotated keys fail fast.
+        db.reference("configuracion/evento_actual").get()
         firebase_ready = True
-        print("[OK] Firebase inicializado.")
+        print("[OK] Firebase inicializado y verificado.")
     except Exception as exc:
         firebase_ready = False
         print(f"[ERROR] Firebase no inicializado: {exc}")

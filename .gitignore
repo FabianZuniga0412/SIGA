@@ -2,3 +2,8 @@
 /.env
 /.venv
 /siga_schema_seed.json
+# Secrets
+/.firebase_credentials_minified.txt
+/firebase-service-account.json
+/siga-*-firebase-adminsdk-*.json
+/certs/*-key.pem

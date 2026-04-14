@@ -938,13 +938,11 @@ def api_eventos_audit():
     hasta = funciones_extras.parse_timestamp(request.args.get("hasta")) if request.args.get("hasta") else None
 
     raw = firebase.db.reference("auditoria/eventos").order_by_key().limit_to_last(500).get() or {}
-    rows = list(raw.values()) if isinstance(raw, dict) else []
-    rows_sorted = sorted(rows, key=lambda x: funciones_extras.parse_timestamp((x or {}).get("timestamp")), reverse=True)
+    rows = [item for item in (raw.values() if isinstance(raw, dict) else []) if isinstance(item, dict)]
+    rows_sorted = sorted(rows, key=lambda x: funciones_extras.parse_timestamp(x.get("timestamp")), reverse=True)
 
     out = []
     for item in rows_sorted:
-        if not isinstance(item, dict):
-            continue
         ts = funciones_extras.parse_timestamp(item.get("timestamp"))
         if desde and ts < desde:
             continue
@@ -986,7 +984,11 @@ def api_crear_staff():
     }
     if not registro["nombre"] or not registro["email"]:
         return jsonify({"ok": False, "error": "nombre y email son requeridos"}), 400
-    firebase.db.reference(f"usuarios_staff/{uid}").set(registro)
+    try:
+        firebase.db.reference(f"usuarios_staff/{uid}").set(registro)
+    except Exception as exc:
+        print(f"[ERROR] No se pudo crear usuario staff {uid}: {exc}")
+        return jsonify({"ok": False, "error": "No se pudo guardar usuario en Firebase"}), 503
     return jsonify({"ok": True, "uid": uid, "staff": registro})
 
 @rutas_bp.route("/api/usuarios_staff/<uid>", methods=["PUT"])
@@ -995,7 +997,11 @@ def api_actualizar_staff(uid):
         return jsonify({"ok": False, "error": "No autorizado"}), 401
     if not firebase.firebase_ready:
         return jsonify({"ok": False, "error": "Firebase no disponible"}), 503
-    current = firebase.db.reference(f"usuarios_staff/{uid}").get() or {}
+    try:
+        current = firebase.db.reference(f"usuarios_staff/{uid}").get() or {}
+    except Exception as exc:
+        print(f"[ERROR] No se pudo leer usuario staff {uid}: {exc}")
+        return jsonify({"ok": False, "error": "No se pudo leer usuario en Firebase"}), 503
     if not isinstance(current, dict):
         return jsonify({"ok": False, "error": "Usuario staff no encontrado"}), 404
 
@@ -1024,7 +1030,11 @@ def api_actualizar_staff(uid):
     if "rol" in update:
         update["rol"] = effective_role
 
-    firebase.db.reference(f"usuarios_staff/{uid}").update(update)
+    try:
+        firebase.db.reference(f"usuarios_staff/{uid}").update(update)
+    except Exception as exc:
+        print(f"[ERROR] No se pudo actualizar usuario staff {uid}: {exc}")
+        return jsonify({"ok": False, "error": "No se pudo actualizar usuario en Firebase"}), 503
     return jsonify({"ok": True})
 
 @rutas_bp.route("/api/usuarios_staff/<uid>", methods=["DELETE"])
@@ -1033,7 +1043,11 @@ def api_eliminar_staff(uid):
         return jsonify({"ok": False, "error": "No autorizado"}), 401
     if not firebase.firebase_ready:
         return jsonify({"ok": False, "error": "Firebase no disponible"}), 503
-    firebase.db.reference(f"usuarios_staff/{uid}").delete()
+    try:
+        firebase.db.reference(f"usuarios_staff/{uid}").delete()
+    except Exception as exc:
+        print(f"[ERROR] No se pudo eliminar usuario staff {uid}: {exc}")
+        return jsonify({"ok": False, "error": "No se pudo eliminar usuario en Firebase"}), 503
     return jsonify({"ok": True})
 
 @rutas_bp.route("/api/lectores/<uid>/disconnect", methods=["POST"])
@@ -1082,12 +1096,14 @@ def api_reportes_export():
     fmt = str(request.args.get("format", "csv")).strip().lower()
     data = funciones_extras.construir_reporte_data(desde, hasta)
 
+    report_stamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+
     if fmt == "csv":
         text = funciones_extras.reporte_csv(data)
         return Response(
             text,
             mimetype="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=reporte_siga_{int(time.time())}.csv"},
+            headers={"Content-Disposition": f"attachment; filename=Reporte_Evento_{report_stamp}.csv"},
         )
 
     if fmt == "pdf":
@@ -1098,7 +1114,7 @@ def api_reportes_export():
         return Response(
             payload,
             mimetype="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=reporte_siga_{int(time.time())}.pdf"},
+            headers={"Content-Disposition": f"attachment; filename=Reporte_Evento_{report_stamp}.pdf"},
         )
 
     return jsonify({"ok": False, "error": "Formato no soportado. Usa csv o pdf"}), 400
