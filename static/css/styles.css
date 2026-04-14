@@ -424,6 +424,10 @@ label, input, button, select {
   gap: var(--spacing-3);
 }
 
+.metric-grid-reportes {
+  margin-bottom: var(--spacing-4);
+}
+
 .metric-card {
   background: var(--surface);
   border-radius: var(--radius);
