@@ -393,83 +393,45 @@ def enviar_invitacion_email(client, invitado, key_hash):
     qr_filename = os.path.join(temp_dir, f"qr_{invitado_id}_{nombre_token}.png")
     img.save(qr_filename)
 
-    qr_inline = str(yagmail.inline(qr_filename))
-    if "<img " in qr_inline and "style=" not in qr_inline:
-        qr_inline = qr_inline.replace(
-            "<img ",
-            "<img style=\"display:block;border:0;outline:none;text-decoration:none;margin:0 auto;\" ",
-            1,
-        )
-    html = f"""<!doctype html>
+    html_part1 = f"""<!doctype html>
 <html lang="es">
-<body style="margin:0;padding:0;background-color:#f4f4f4;">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;background-color:#f4f4f4;margin:0;padding:0;">
-    <tr>
-      <td align="center" style="margin:0;padding:16px 10px;font-family:'Segoe UI',Arial,sans-serif;line-height:1.3;">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="420" style="width:420px;max-width:420px;border-collapse:separate;border:1px solid #dddddd;background-color:#ffffff;">
-          <tr>
-            <td align="center" style="background-color:#1a73e8;padding:14px 16px;margin:0;">
-              <p style="margin:0;padding:0;color:#ffffff;font-size:20px;line-height:1.2;font-weight:700;">{evento_nombre}</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:18px 18px 8px 18px;margin:0;">
-              <p style="margin:0;padding:0;color:#111111;font-size:16px;line-height:1.3;font-weight:700;">Hola {nombre},</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 18px 14px 18px;margin:0;">
-              <p style="margin:0;padding:0;color:#666666;font-size:13px;line-height:1.35;">Presenta esta invitación para el acceso.</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 18px 18px 18px;margin:0;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
-                <tr>
-                  <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;">
-                    <p style="margin:0;padding:0;color:#888888;font-size:10px;line-height:1.2;font-weight:700;text-transform:uppercase;">ID de Invitado</p>
-                    <p style="margin:3px 0 0 0;padding:0;color:#111111;font-size:14px;line-height:1.25;font-weight:700;">#{invitado_id}</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;">
-                    <p style="margin:0;padding:0;color:#888888;font-size:10px;line-height:1.2;font-weight:700;text-transform:uppercase;">Fecha y Hora</p>
-                    <p style="margin:3px 0 0 0;padding:0;color:#111111;font-size:14px;line-height:1.25;">{fecha_evento} | {hora_evento}</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;">
-                    <p style="margin:0;padding:0;color:#888888;font-size:10px;line-height:1.2;font-weight:700;text-transform:uppercase;">Ubicación</p>
-                    <p style="margin:3px 0 0 0;padding:0;color:#111111;font-size:14px;line-height:1.25;">{evento_ubicacion}</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:8px 0;">
-                    <p style="margin:0;padding:0;color:#888888;font-size:10px;line-height:1.2;font-weight:700;text-transform:uppercase;">Cupo Autorizado</p>
-                    <p style="margin:3px 0 0 0;padding:0;color:#111111;font-size:14px;line-height:1.25;">{cupo} personas</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="background-color:#fafafa;border-top:1px dashed #cccccc;padding:18px 18px 16px 18px;margin:0;">
-              <p style="margin:0 0 10px 0;padding:0;color:#333333;font-size:13px;line-height:1.3;font-weight:700;">Escanea este código en la entrada:</p>
-              {qr_inline}
-              <p style="margin:10px 0 0 0;padding:0;color:#999999;font-size:10px;line-height:1.3;text-transform:uppercase;letter-spacing:1px;">Sistema SIGA - Acceso Inteligente</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<body style="margin:0;padding:14px;background:#f4f4f4;font-family:Arial,sans-serif;">
+  <div style="max-width:420px;margin:0 auto;background:#ffffff;border:1px solid #dddddd;">
+    <div style="background:#1a73e8;color:#ffffff;text-align:center;padding:10px 12px;font-size:18px;font-weight:700;">
+      {evento_nombre}
+    </div>
+    <div style="padding:12px 14px;">
+      <p style="margin:0;color:#1f2937;font-size:14px;line-height:1.25;">
+        Hola {nombre},<br>
+        Presenta esta invitación para el acceso.<br><br>
+        ID de invitado: #{invitado_id}<br>
+        Fecha y hora: {fecha_evento} | {hora_evento}<br>
+        Ubicación: {evento_ubicacion}<br>
+        Cupo autorizado: {cupo} personas<br><br>
+        Escanea este código en la entrada:
+      </p>
+      <div style="margin-top:8px;text-align:center;">
+    """
+
+    html_part2 = """
+      </div>
+      <p style="margin:8px 0 0 0;color:#6b7280;font-size:11px;line-height:1.2;text-align:center;">
+        Sistema SIGA - Acceso Inteligente
+      </p>
+    </div>
+  </div>
 </body>
 </html>"""
     try:
         client.send(
             to=email,
             subject=asunto,
-            contents=html,
+            contents=[
+                html_part1,
+                yagmail.inline(qr_filename),
+                html_part2,
+            ],
+            attachments=[qr_filename],
             headers={"From": f"{SMTP_FROM_NAME} <{SMTP_USER}>"},
         )
         return None
