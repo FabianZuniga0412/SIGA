@@ -368,6 +368,7 @@ def enviar_invitacion_email(client, invitado, key_hash):
     evento_ubicacion = str((evento or {}).get("ubicacion", "")).strip() or "Por confirmar"
     evento_timezone = str((evento or {}).get("timezone", "America/Mexico_City")).strip() or "America/Mexico_City"
     fecha_inicio = str((evento or {}).get("fecha_inicio", "")).strip()
+    
     fecha_evento = "Por confirmar"
     hora_evento = "Por confirmar"
     ts_evento = parse_timestamp(fecha_inicio)
@@ -392,30 +393,59 @@ def enviar_invitacion_email(client, invitado, key_hash):
     qr_filename = os.path.join(temp_dir, f"qr_{invitado_id}_{nombre_token}.png")
     img.save(qr_filename)
 
+    # HTML con formato compacto y estilo de tarjeta
     html_part1 = f"""
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
         <style>
-            body {{ font-family: Arial, sans-serif; color: #111111; margin: 0; padding: 16px; }}
-            p {{ margin: 0 0 8px 0; line-height: 1.35; }}
-            .spacer {{ height: 8px; }}
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f4f4; padding: 10px; margin: 0; }}
+            .ticket {{ background: #ffffff; max-width: 400px; margin: 0 auto; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+            .header {{ background: #1a73e8; color: white; padding: 15px; text-align: center; }}
+            .content {{ padding: 20px; color: #333; }}
+            .info-row {{ margin-bottom: 10px; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }}
+            .label {{ font-size: 11px; text-transform: uppercase; color: #777; display: block; font-weight: bold; }}
+            .value {{ font-size: 15px; font-weight: 600; color: #111; }}
+            .qr-section {{ background: #fafafa; padding: 20px; text-align: center; border-top: 1px dashed #ccc; }}
+            h2 {{ margin: 0; font-size: 18px; }}
+            p {{ margin: 0 0 10px 0; line-height: 1.3; font-size: 14px; }}
         </style>
     </head>
     <body>
-        <p>Hola {nombre},</p>
-        <p>Usa esta invitación digital para tener acceso el día del evento.</p>
-        <p>ID de Invitado: {invitado_id}</p>
-        <p>Cupo Máximo: {cupo} personas</p>
-        <p>Fecha del evento: {fecha_evento}</p>
-        <p>Hora del evento: {hora_evento}</p>
-        <p>Ubicación: {evento_ubicacion}</p>
-        <div class="spacer"></div>
-        <p>Presenta este código QR en el acceso:</p>
+        <div class="ticket">
+            <div class="header">
+                <h2>{evento_nombre}</h2>
+            </div>
+            <div class="content">
+                <p><strong>Hola {nombre},</strong></p>
+                <p style="color: #666;">Usa esta invitación para acceder al evento:</p>
+                
+                <div class="info-row">
+                    <span class="label">ID de Invitado</span>
+                    <span class="value">#{invitado_id}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Fecha y Hora</span>
+                    <span class="value">{fecha_evento} | {hora_evento}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Ubicación</span>
+                    <span class="value">{evento_ubicacion}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Cupo Autorizado</span>
+                    <span class="value">{cupo} personas</span>
+                </div>
+            </div>
+            <div class="qr-section">
+                <p style="font-weight: bold; margin-bottom: 15px;">Escanea este código en la entrada:</p>
     """
     
     html_part2 = """
+                <p style="font-size: 11px; color: #999; margin-top: 15px;">Sistema SIGA - Acceso Inteligente</p>
+            </div>
+        </div>
     </body>
     </html>
     """

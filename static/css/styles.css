@@ -699,6 +699,23 @@ tbody tr:hover td {
   margin: 0 auto;
 }
 
+.invitados-head {
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.invitados-head-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.invitados-head-actions {
+  margin-left: auto;
+}
+
 .invitados-filter-form,
 .invitados-actions-row {
   max-width: 980px;
@@ -1155,7 +1172,21 @@ tbody tr:hover td {
     min-width: 0;
     font-size: 13px;
     padding: 10px 12px;
-    margin-right: auto;
+    margin-right: 0;
+  }
+  .invitados-head {
+    align-items: stretch;
+  }
+  .invitados-head-info {
+    width: 100%;
+  }
+  .invitados-head-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  .invitados-head-actions #openInviteModal {
+    width: 100%;
+    justify-content: center;
   }
   .view-section,
   .card {

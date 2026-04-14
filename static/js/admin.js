@@ -290,6 +290,13 @@ function bindUI() {
       showGlobalNotice("Invitación enviada correctamente.", "success");
       return;
     }
+
+    if (action === "download-qr") {
+      const row = invitadosState.items.find((x) => x.key === key);
+      if (!row) return;
+      await downloadInvitadoQr(row);
+      return;
+    }
   });
 
   solicitudesCupoRefresh?.addEventListener("click", async () => {
@@ -824,6 +831,7 @@ function renderInvitados(rows) {
                 <details class="row-menu">
                   <summary aria-label="Más acciones">⋮</summary>
                   <div class="row-menu-items popover-menu">
+                    <button class="btn btn-muted" data-action="download-qr" data-key="${escapeHtml(x.key)}">Descargar QR</button>
                     <button class="btn btn-secondary" data-action="delete" data-key="${escapeHtml(x.key)}">Eliminar</button>
                   </div>
                 </details>
@@ -1295,6 +1303,58 @@ function setAforoState(actual, maximo) {
   }
   aforoCard.classList.add(levelClass);
   if (aforoLevelText) aforoLevelText.textContent = `${levelLabel} (${pct}%)`;
+}
+
+async function downloadInvitadoQr(invitado) {
+  const invitadoId = String(invitado?.id || "").trim();
+  const invitadoKey = String(invitado?.key || "").trim();
+  if (!invitadoId || !invitadoKey) {
+    showGlobalNotice("No se pudo descargar el QR: faltan datos del invitado.", "error");
+    return;
+  }
+  if (typeof QRCode === "undefined") {
+    showGlobalNotice("No se pudo generar el QR en este navegador.", "error");
+    return;
+  }
+
+  const payload = `${invitadoId}|${invitadoKey}`;
+  const holder = document.createElement("div");
+  holder.style.position = "fixed";
+  holder.style.left = "-9999px";
+  holder.style.top = "-9999px";
+  document.body.appendChild(holder);
+
+  try {
+    new QRCode(holder, {
+      text: payload,
+      width: 512,
+      height: 512,
+      colorDark: "#111827",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H,
+    });
+
+    await delay(0);
+
+    const canvas = holder.querySelector("canvas");
+    const img = holder.querySelector("img");
+    const href = canvas?.toDataURL("image/png") || img?.src || "";
+    if (!href) {
+      showGlobalNotice("No se pudo generar el archivo del QR.", "error");
+      return;
+    }
+
+    const safeId = invitadoId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = `siga-invitado-${safeId}-qr.png`;
+    a.click();
+    showGlobalNotice("QR descargado correctamente.", "success");
+  } catch (error) {
+    showGlobalNotice(`No se pudo descargar el QR: ${error.message}`, "error");
+  } finally {
+    holder.remove();
+  }
 }
 
 async function api(url, options = {}) {

@@ -54,11 +54,6 @@
             <h1 id="headerTitle">Panel de Control</h1>
             <p id="subheaderStatus">Monitoreo en tiempo real</p>
           </div>
-          <div class="header-profile" style="gap: 24px;">
-            <button id="openInviteModal" class="btn btn-primary" style="box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);">
-              <i class="ph-bold ph-plus"></i> Nuevo Invitado
-            </button>
-          </div>
         </header>
         <section id="view-dashboard" class="view-section">
           <div class="dashboard-layout-main">
@@ -199,11 +194,18 @@
         <section id="view-invitados" class="view-section hidden">
           <div class="invitados-layout stack-gap">
             <section class="card stack-gap">
-              <div class="section-head">
-                <i class="ph-fill ph-users section-head-icon"></i>
-                <div>
-                  <h2>Gestión de Invitados</h2>
-                  <p class="section-subtitle">Busca, filtra y ejecuta acciones masivas de forma rápida.</p>
+              <div class="section-head invitados-head">
+                <div class="invitados-head-info">
+                  <i class="ph-fill ph-users section-head-icon"></i>
+                  <div>
+                    <h2>Gestión de Invitados</h2>
+                    <p class="section-subtitle">Busca, filtra y ejecuta acciones masivas de forma rápida.</p>
+                  </div>
+                </div>
+                <div class="invitados-head-actions">
+                  <button id="openInviteModal" class="btn btn-primary" type="button">
+                    <i class="ph-bold ph-plus"></i> Nuevo Invitado
+                  </button>
                 </div>
               </div>
               <form id="invitadosFilterForm" class="inline-form invitados-filter-form">

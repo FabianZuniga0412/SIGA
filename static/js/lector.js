@@ -3,6 +3,7 @@ const canvas = document.getElementById("canvas");
 const frozenFrame = document.getElementById("frozenFrame");
 const btnStart = document.getElementById("btnStart");
 const btnFlash = document.getElementById("btnFlash");
+const btnManualCapture = document.getElementById("btnManualCapture");
 const processingOverlay = document.getElementById("processingOverlay");
 const phaseText = document.getElementById("phaseText");
 const resultModal = document.getElementById("resultModal");
@@ -35,11 +36,13 @@ let isFrameFrozen = false;
 let nextScanAt = 0;
 let qrDetector = null;
 let detectorWarningShown = false;
+let manualCaptureMode = false;
 let heartbeatIntervalId = null;
 const deviceId = getOrCreateDeviceId();
 
 btnStart?.addEventListener("click", toggleCamera);
 btnFlash?.addEventListener("click", toggleFlash);
+btnManualCapture?.addEventListener("click", captureManualPhotoAndValidate);
 lectorPinLoginBtn?.addEventListener("click", loginLectorWithPin);
 bindPinInputs();
 window.addEventListener("online", () => setConnectionStatus("nube"));
@@ -82,21 +85,22 @@ function setupQrDetector() {
 }
 
 function renderDetectorSupportState() {
-  if (qrDetector || detectorWarningShown) return;
-  detectorWarningShown = true;
-  if (guestInfo) {
-    guestInfo.innerHTML = `
-      <h3>Navegador no compatible</h3>
-      <p>Este lector requiere detección nativa de QR (BarcodeDetector).</p>
-      <small>Actualiza Safari/iOS o usa un navegador compatible.</small>
-    `;
+  manualCaptureMode = !qrDetector;
+  if (!manualCaptureMode) {
+    btnManualCapture?.classList.add("hidden");
+    return;
   }
+  btnManualCapture?.classList.remove("hidden");
+  if (detectorWarningShown) return;
+  detectorWarningShown = true;
+  resetGuestPanel();
   [btnPlusOne, btnPlusTwo, btnAll].forEach((btn) => {
     if (!btn) return;
     btn.disabled = true;
     btn.onclick = null;
   });
   btnCancelGuest?.classList.add("hidden");
+  updateManualCaptureAvailability();
 }
 
 function getOrCreateDeviceId() {
@@ -372,6 +376,7 @@ async function startCamera() {
 
     btnStart.textContent = "Pausar camara";
     btnFlash.disabled = false;
+    updateManualCaptureAvailability();
     startAutoScanLoop();
   } catch (error) {
     stopCamera();
@@ -394,9 +399,11 @@ function stopCamera() {
   btnFlash.textContent = "Flash";
   btnFlash.disabled = true;
   btnStart.textContent = "Reanudar camara";
+  updateManualCaptureAvailability();
 }
 
 function startAutoScanLoop() {
+  if (manualCaptureMode) return;
   if (isFrameFrozen) return;
   stopAutoScanLoop();
   scanIntervalId = window.setInterval(() => {
@@ -518,6 +525,7 @@ async function detectQrInCanvas() {
 
 async function validateFrame(imagenBase64, showLoader = true) {
   isProcessing = true;
+  updateManualCaptureAvailability();
   if (showLoader) {
     showProcessing();
     phaseText.textContent = "PDI Fase: Analizando";
@@ -636,6 +644,7 @@ async function validateFrame(imagenBase64, showLoader = true) {
     nextScanAt = Date.now() + 1500;
   } finally {
     isProcessing = false;
+    updateManualCaptureAvailability();
   }
 }
 
@@ -650,7 +659,9 @@ function hideProcessing() {
 function resetGuestPanel() {
   currentValidatedGuest = null;
   if (guestInfo) {
-    guestInfo.innerHTML = `<p class="placeholder-text">Enfoca un código QR para escanear</p>`;
+    guestInfo.innerHTML = manualCaptureMode
+      ? `<p class="placeholder-text">Presiona "Tomar foto y validar" para capturar el QR</p>`
+      : `<p class="placeholder-text">Enfoca un código QR para escanear</p>`;
   }
   btnCancelGuest?.classList.add("hidden");
   [btnPlusOne, btnPlusTwo, btnAll].forEach((btn) => {
@@ -659,6 +670,7 @@ function resetGuestPanel() {
       btn.onclick = null;
     }
   });
+  updateManualCaptureAvailability();
 }
 
 function showGuestSnapshot(guest, statusText = "") {
@@ -684,6 +696,7 @@ btnCancelGuest?.addEventListener("click", () => {
   unfreezeCameraFrame();
   resetGuestPanel();
   nextScanAt = Date.now() + 500;
+  updateManualCaptureAvailability();
 });
 
 function showGuestActions(guest) {
@@ -718,6 +731,7 @@ function showGuestActions(guest) {
       unfreezeCameraFrame();
       resetGuestPanel();
       await refreshLectorEstado();
+      updateManualCaptureAvailability();
     };
   };
 
@@ -744,12 +758,45 @@ function showResult({ type, title, message, detail, actionLabel, secondaryLabel,
     if (!currentValidatedGuest) {
       unfreezeCameraFrame();
     }
+    updateManualCaptureAvailability();
   });
   if (secondaryLabel && typeof onSecondary === "function") {
     resultModal.querySelector("[data-secondary='true']")?.addEventListener("click", async () => {
       await onSecondary();
     });
   }
+}
+
+function updateManualCaptureAvailability() {
+  if (!btnManualCapture) return;
+  if (!manualCaptureMode) {
+    btnManualCapture.classList.add("hidden");
+    return;
+  }
+  btnManualCapture.classList.remove("hidden");
+  const modalOpen = !resultModal.classList.contains("hidden");
+  const pinModalOpen = !!pinLoginModal && !pinLoginModal.classList.contains("hidden");
+  const canCapture = !!stream && !isProcessing && !isFrameFrozen && !modalOpen && !pinModalOpen && !currentValidatedGuest;
+  btnManualCapture.disabled = !canCapture;
+}
+
+async function captureManualPhotoAndValidate() {
+  if (!manualCaptureMode) return;
+  if (!stream || isProcessing || isFrameFrozen || currentValidatedGuest) return;
+  const frame = captureFrame();
+  if (!frame) {
+    showResult({
+      type: "error",
+      title: "Camara no lista",
+      message: "No se pudo capturar la imagen. Intenta nuevamente en unos segundos.",
+      actionLabel: "Cerrar",
+    });
+    updateManualCaptureAvailability();
+    return;
+  }
+  freezeCameraFrame(captureFreezeFrame());
+  updateManualCaptureAvailability();
+  await validateFrame(frame.imagenBase64, true);
 }
 
 async function solicitarAumentoCupo(invitadoId, invitadoKey, cupoUsado = 0, cupoTotal = 0) {
