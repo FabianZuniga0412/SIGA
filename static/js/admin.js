@@ -130,12 +130,13 @@ let lectorPortalLink = "";
 let eventoConfigBaseSnapshot = "";
 let eventoConfigDirty = false;
 let eventoConfigSaving = false;
+let eventoConfigEditMode = false;
 let reportExportIsFinal = false;
 
 const viewTitles = {
   dashboard: "Panel de Control",
   invitados: "Gestión de Invitados",
-  eventos: "Gestión de Eventos",
+  eventos: "Evento Actual",
   "nuevo-evento": "Planeación e Historial",
   lectores: "Lectores",
   "lector-qr": "Lector QR",
@@ -311,16 +312,22 @@ function bindUI() {
 
   eventoActualForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const payload = formToObject(eventoActualForm);
-    eventoConfigSaving = true;
-    try {
-      await api("/api/configuracion/evento_actual", { method: "PUT", body: payload });
-      await refreshAll();
-      showGlobalNotice("Configuración del evento guardada adecuadamente.", "success");
-    } finally {
-      eventoConfigSaving = false;
-      updateEventoConfigDirtyState();
+    if (!eventoConfigEditMode) return;
+    await submitEventoActualConfig();
+  });
+  eventoConfigSaveBtn?.addEventListener("click", async () => {
+    if (!eventoActualForm) return;
+    const hasActiveEvent = Boolean(String(eventosState.activeEventId || "").trim());
+    if (!hasActiveEvent) {
+      showGlobalNotice("No hay evento activo. Debes activarlo desde Planeación e Historial.", "error");
+      return;
     }
+    if (!eventoConfigEditMode) {
+      setEventoConfigEditable(true);
+      return;
+    }
+    if (!eventoConfigDirty || eventoConfigSaving) return;
+    await submitEventoActualConfig();
   });
 
   nuevoEventoForm?.addEventListener("submit", async (event) => {
@@ -918,6 +925,7 @@ function renderEventos(rows, activeEventId = "") {
     }
   }
   if (closeActiveEventBtn) closeActiveEventBtn.disabled = !eventosState.activeEventId;
+  if (!eventosState.activeEventId) setEventoConfigEditable(false);
   renderEventosHistory(eventosState.items, eventosState.activeEventId);
 }
 
@@ -930,9 +938,9 @@ function renderEventosHistory(rows, activeEventId = "") {
           const id = String(x.id_evento || "").trim();
           const estadoRaw = String(x.estado || "borrador").toLowerCase();
           const isActive = id && id === String(activeEventId || "");
-          const estadoLabel = estadoRaw === "borrador" ? "Listo" : estadoRaw === "activo" ? "Activo" : "Cerrado";
-          const estadoClass = estadoRaw === "activo" ? "activo" : estadoRaw === "cerrado" ? "cerrado" : "";
-          const activateDisabled = estadoRaw !== "borrador";
+          const estadoLabel = isActive ? "Activo" : estadoRaw === "cerrado" ? "Cerrado" : "Listo";
+          const estadoClass = isActive ? "activo" : estadoRaw === "cerrado" ? "cerrado" : "";
+          const activateDisabled = isActive || estadoRaw === "cerrado";
           return `<tr>
       <td>${escapeHtml(id)}</td>
       <td>${escapeHtml(x.nombre || "")}</td>
@@ -1157,13 +1165,55 @@ function serializeEventoConfigForm() {
 function updateEventoConfigDirtyState() {
   const current = serializeEventoConfigForm();
   eventoConfigDirty = Boolean(current && eventoConfigBaseSnapshot && current !== eventoConfigBaseSnapshot);
-  if (eventoConfigSaveBtn) eventoConfigSaveBtn.disabled = !eventoConfigDirty || eventoConfigSaving;
+  if (!eventoConfigSaveBtn || !eventoActualForm) return;
+  const hasActiveEvent = Boolean(String(eventosState.activeEventId || "").trim());
+  if (!hasActiveEvent) {
+    eventoConfigSaveBtn.textContent = "Cambiar Config";
+    eventoConfigSaveBtn.disabled = true;
+    return;
+  }
+  if (!eventoConfigEditMode) {
+    eventoConfigSaveBtn.textContent = "Cambiar Config";
+    eventoConfigSaveBtn.disabled = eventoConfigSaving;
+    return;
+  }
+  eventoConfigSaveBtn.textContent = "Guardar Configuración";
+  eventoConfigSaveBtn.disabled = !eventoConfigDirty || eventoConfigSaving;
 }
 
 function captureEventoConfigBaseSnapshot() {
   eventoConfigBaseSnapshot = serializeEventoConfigForm();
   eventoConfigDirty = false;
-  if (eventoConfigSaveBtn) eventoConfigSaveBtn.disabled = true;
+  updateEventoConfigDirtyState();
+}
+
+function setEventoConfigEditable(enabled) {
+  eventoConfigEditMode = !!enabled;
+  if (!eventoActualForm) return;
+  for (const field of Array.from(eventoActualForm.elements || [])) {
+    if (!field || field === eventoConfigSaveBtn) continue;
+    if (field.name === "id_evento" || field.type === "hidden") continue;
+    field.disabled = !eventoConfigEditMode;
+  }
+  updateEventoConfigDirtyState();
+}
+
+async function submitEventoActualConfig() {
+  if (!eventoActualForm) return;
+  const payload = formToObject(eventoActualForm);
+  eventoConfigSaving = true;
+  updateEventoConfigDirtyState();
+  try {
+    await api("/api/configuracion/evento_actual", { method: "PUT", body: payload });
+    await refreshAll();
+    setEventoConfigEditable(false);
+    showGlobalNotice("Configuración del evento guardada adecuadamente.", "success");
+  } catch (error) {
+    showGlobalNotice(`No se pudo guardar configuración: ${error.message}`, "error");
+  } finally {
+    eventoConfigSaving = false;
+    updateEventoConfigDirtyState();
+  }
 }
 
 function renderConfig(config) {

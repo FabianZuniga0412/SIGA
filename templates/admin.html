@@ -29,7 +29,7 @@
           <nav class="nav-menu" id="navMenu">
             <a class="nav-item active" data-view="dashboard" href="#"><i class="ph ph-squares-four"></i> Panel de Control</a>
             <a class="nav-item" data-view="invitados" href="#"><i class="ph ph-users-three"></i> Invitados</a>
-            <a class="nav-item" data-view="eventos" href="#"><i class="ph ph-calendar-blank"></i> Eventos</a>
+            <a class="nav-item" data-view="eventos" href="#"><i class="ph ph-calendar-blank"></i> Evento Actual</a>
             <a class="nav-item" data-view="nuevo-evento" href="#"><i class="ph ph-calendar-plus"></i> Planeación e Historial</a>
             <a class="nav-item" data-view="lectores" href="#"><i class="ph ph-qr-code"></i> Lectores</a>
             <a class="nav-item" data-view="lector-qr" href="#"><i class="ph ph-scan-smiley"></i> Lector QR</a>
@@ -349,35 +349,35 @@
             <div class="eventos-side stack-gap">
               <section class="card stack-gap">
                 <h2>Configuración del Evento Actual</h2>
-                <p class="form-intro">Edita aquí la configuración operativa del evento activo. Los cambios se registran en el historial.</p>
+                <p class="form-intro">La configuración se mantiene protegida. Usa "Cambiar config" para habilitar edición del evento activo.</p>
                 <form id="eventoActualForm" class="grid-form two-cols evento-config-form">
                   <input name="id_evento" type="hidden" />
                   <div class="form-field">
                     <label for="eventoNombre">Nombre del evento</label>
-                    <input id="eventoNombre" name="nombre" type="text" placeholder="Ej. Evento SIGA 2026" required />
+                    <input id="eventoNombre" name="nombre" type="text" placeholder="Ej. Evento SIGA 2026" required disabled />
                   </div>
                   <div class="form-field">
                     <label for="eventoUbicacion">Ubicación</label>
-                    <input id="eventoUbicacion" name="ubicacion" type="text" placeholder="Ej. Auditorio Principal" />
+                    <input id="eventoUbicacion" name="ubicacion" type="text" placeholder="Ej. Auditorio Principal" disabled />
                   </div>
 
                   <div class="form-field">
                     <label for="eventoAforoMax">Aforo máximo</label>
-                    <input id="eventoAforoMax" name="aforo_max" type="number" min="0" placeholder="Ej. 200" />
+                    <input id="eventoAforoMax" name="aforo_max" type="number" min="0" placeholder="Ej. 200" disabled />
                   </div>
 
                   <div class="form-field">
                     <label for="eventoFechaInicio">Inicio del evento</label>
-                    <input id="eventoFechaInicio" name="fecha_inicio" type="datetime-local" />
+                    <input id="eventoFechaInicio" name="fecha_inicio" type="datetime-local" disabled />
                   </div>
                   <div class="form-field">
                     <label for="eventoFechaFin">Fin del evento</label>
-                    <input id="eventoFechaFin" name="fecha_fin" type="datetime-local" />
+                    <input id="eventoFechaFin" name="fecha_fin" type="datetime-local" disabled />
                   </div>
 
                   <div class="form-field">
                     <label for="eventoTimezone">Zona horaria</label>
-                    <select id="eventoTimezone" name="timezone">
+                    <select id="eventoTimezone" name="timezone" disabled>
                       <option value="America/Mexico_City">America/Mexico_City</option>
                       <option value="America/Tijuana">America/Tijuana</option>
                       <option value="America/Cancun">America/Cancun</option>
@@ -390,7 +390,7 @@
                     </select>
                   </div>
 
-                  <button class="btn btn-primary evento-config-submit" id="eventoConfigSaveBtn" type="submit" disabled>Guardar Configuración</button>
+                  <button class="btn btn-primary evento-config-submit" id="eventoConfigSaveBtn" type="button" disabled>Cambiar Config</button>
                 </form>
               </section>
             </div>

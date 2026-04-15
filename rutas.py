@@ -285,22 +285,32 @@ def api_actualizar_evento_actual():
         return jsonify({"ok": False, "error": "Firebase no disponible"}), 503
 
     payload = request.get_json(silent=True) or {}
-    permitido = {
-        "id_evento",
-        "nombre",
-        "ubicacion",
-        "aforo_max",
-        "aforo_actual",
-        "estado",
-        "fecha_inicio",
-        "fecha_fin",
-        "timezone",
-    }
+    eventos = funciones_extras.eventos_listado(firebase.leer_eventos())
+    active_id = funciones_extras.active_event_id_from_rows(eventos)
+    if not active_id:
+        return jsonify({"ok": False, "error": "No hay evento activo. Debe activarse desde Planeación e Historial."}), 409
+
+    permitido = {"nombre", "ubicacion", "aforo_max", "aforo_actual", "fecha_inicio", "fecha_fin", "timezone"}
     update = {k: v for k, v in payload.items() if k in permitido}
-    if "estado" in update:
-        update["estado"] = funciones_extras.normalize_event_state(update.get("estado"), "borrador")
+    if "aforo_max" in update:
+        update["aforo_max"] = max(funciones_extras.safe_int(update.get("aforo_max"), 0), 0)
+    if "aforo_actual" in update:
+        update["aforo_actual"] = max(funciones_extras.safe_int(update.get("aforo_actual"), 0), 0)
     if not update:
         return jsonify({"ok": False, "error": "Sin campos válidos para actualizar"}), 400
+
+    # El evento activo solo cambia por /api/eventos/<id>/publish.
+    update["id_evento"] = active_id
+    update["estado"] = "activo"
+
+    ev_ref = firebase.db.reference(f"eventos/{active_id}")
+    ev_before = ev_ref.get() or {}
+    if not isinstance(ev_before, dict):
+        return jsonify({"ok": False, "error": "Evento activo no encontrado"}), 404
+    ev_ref.update(update)
+    ev_after = ev_ref.get() or {}
+    funciones_extras.audit_evento("evento", active_id, "update_from_active_config", ev_before if isinstance(ev_before, dict) else {}, ev_after if isinstance(ev_after, dict) else {})
+
     ref = firebase.db.reference("configuracion/evento_actual")
     before = ref.get() or {}
     ref.update(update)
