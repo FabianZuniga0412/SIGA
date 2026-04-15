@@ -712,7 +712,7 @@ def parse_timestamp(value):
         return datetime.min.replace(tzinfo=timezone.utc)
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
-def aplicar_filtros_invitados(rows, q = "", pendiente = None, tipo = ""):
+def aplicar_filtros_invitados(rows, q = "", pendiente = None, tipo = "", email_pendiente = None):
     qn = (q or "").strip().lower()
     tipo_n = (tipo or "").strip().lower()
     out = []
@@ -723,6 +723,9 @@ def aplicar_filtros_invitados(rows, q = "", pendiente = None, tipo = ""):
                 continue
         is_pendiente = safe_int(row.get("cupo_usado"), 0) < safe_int(row.get("cupo_total"), 0)
         if pendiente is not None and is_pendiente != pendiente:
+            continue
+        has_pending_email = not bool(row.get("invitacion_enviada", False))
+        if email_pendiente is not None and has_pending_email != email_pendiente:
             continue
         if tipo_n and str(row.get("tipo_invitado", "")).lower() != tipo_n:
             continue
@@ -798,6 +801,7 @@ def filtrar_y_paginar_invitados(invitados, query_args, paginate = True):
         q=str(query_args.get("q", "") or ""),
         pendiente=parse_bool_param(query_args.get("pendiente")),
         tipo=str(query_args.get("tipo", "") or ""),
+        email_pendiente=parse_bool_param(query_args.get("email_pendiente")),
     )
     if not paginate:
         return {"items": filtered, "page": 1, "page_size": len(filtered) or 1, "total": len(filtered), "total_pages": 1}

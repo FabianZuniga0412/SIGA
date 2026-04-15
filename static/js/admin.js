@@ -549,7 +549,7 @@ function bindUI() {
   });
   fileInput?.addEventListener("change", () => void handleImportFile());
 
-  sendInvitesBtn?.addEventListener("click", () => ejecutarBatch("enviar_invitacion"));
+  sendInvitesBtn?.addEventListener("click", () => enviarInvitacionesPendientes());
 
   retrySyncBtn?.addEventListener("click", async () => {
     await fakeButtonProgress(retrySyncBtn, "Sincronizando...", "Sincronizado");
@@ -956,6 +956,25 @@ async function ejecutarBatch(action) {
     await refreshInvitados();
   } catch (error) {
     showGlobalNotice(`No se pudo ejecutar lote: ${error.message}`, "error");
+  }
+}
+
+async function enviarInvitacionesPendientes() {
+  try {
+    const res = await api("/api/invitados/batch", {
+      method: "POST",
+      body: {
+        action: "enviar_invitacion",
+        scope: "filtered",
+        keys: [],
+        filters: { email_pendiente: "1" },
+      },
+    });
+
+    showGlobalNotice(`Invitaciones pendientes enviadas: ${res.sent || 0}, fallidas: ${res.failed || 0}`, "success");
+    await refreshInvitados();
+  } catch (error) {
+    showGlobalNotice(`No se pudieron enviar invitaciones pendientes: ${error.message}`, "error");
   }
 }
 
@@ -1408,15 +1427,11 @@ async function handleImportFile(fileOverride = null) {
 
     uploadProgress.style.width = "100%";
     const s = data.summary || {};
-    uploadStatus.textContent = `Importación: insertados ${s.inserted || 0}, duplicados ${s.duplicated || 0}, inválidos ${s.invalid || 0} · Correos: enviados ${s.email_sent || 0}, fallidos ${s.email_failed || 0}`;
-    if (Number(s.email_failed || 0) > 0 || data.email_queue_error) {
-      showGlobalNotice(
-        `Importación completada, pero hubo fallas de correo (${s.email_failed || 0}). ${data.email_queue_error ? `Detalle SMTP: ${data.email_queue_error}` : ""}`.trim(),
-        "error"
-      );
-    } else if (Number(s.email_sent || 0) > 0) {
-      showGlobalNotice(`Importación y envío de correos completados. Enviados: ${s.email_sent || 0}.`, "success");
-    }
+    uploadStatus.textContent = `Importación: insertados ${s.inserted || 0}, duplicados ${s.duplicated || 0}, inválidos ${s.invalid || 0} · Invitaciones pendientes ${s.pending_email || 0}`;
+    showGlobalNotice(
+      `Importación completada. Se cargaron ${s.inserted || 0} invitados y quedaron ${s.pending_email || 0} invitaciones pendientes para envío manual.`,
+      "success"
+    );
 
     if (data.error_report_csv) {
       const blob = new Blob([data.error_report_csv], { type: "text/csv;charset=utf-8;" });
