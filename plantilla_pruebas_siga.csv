@@ -1,4 +1,0 @@
-ID_Prueba,Fecha,Hora,Tester,Dispositivo,Plataforma,Navegador_Version,Escenario_Iluminacion,Escenario_Red,Tipo_Codigo,Intento,Resultado,Tiempo_Validacion_ms,Motivo_Fallo,Modo_Offline_Activo,Se_Guardo_Log_Offline,Se_Valido_Completo,Latencia_Red_ms,Captura_Path,Log_ID,Observaciones
-P0001,2026-04-14,10:00,Fabian,Desktop,Windows 11,Chrome 124,Buena,Normal,Limpio,1,Exito,1280,,No,No,Si,45,/evidencia/capturas/p0001.png,log_0001,
-P0002,2026-04-14,10:03,Fabian,Movil,Android 14,Chrome 123,Mala,Lenta,Reflejo,1,Fallo,4200,No detecta QR,No,No,No,380,/evidencia/capturas/p0002.png,log_0002,Reintentar con mejor angulo
-P0003,2026-04-14,10:05,Fabian,Movil,Android 14,Chrome 123,Media,Sin red,Limpio,1,Fallo,5100,Sin conectividad para validacion,Si,Si,No,0,/evidencia/capturas/p0003.png,log_0003,Offline solo guardo log
