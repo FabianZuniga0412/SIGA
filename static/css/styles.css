@@ -798,8 +798,12 @@ tbody tr:hover td {
 
 .invitados-table th:nth-child(4),
 .invitados-table td:nth-child(4) {
-  min-width: 220px;
+  width: 280px;
+  min-width: 280px;
   padding-right: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .invitados-table th:nth-child(5),
@@ -811,7 +815,13 @@ tbody tr:hover td {
 
 .invitados-table th:nth-child(5),
 .invitados-table td:nth-child(5) {
+  width: 84px;
+  min-width: 84px;
   padding-left: 16px;
+  text-align: center;
+  white-space: nowrap;
+  border-left: 1px solid var(--border-dark);
+  font-variant-numeric: tabular-nums;
 }
 
 .invitados-table th:nth-child(7),
@@ -899,12 +909,20 @@ tbody tr:hover td {
   }
   .invitados-table th:nth-child(4),
   .invitados-table td:nth-child(4) {
-    width: 210px;
+    width: 240px;
+    min-width: 240px;
     padding-right: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .invitados-table th:nth-child(5),
   .invitados-table td:nth-child(5) {
+    width: 78px;
+    min-width: 78px;
     padding-left: 12px;
+    text-align: center;
+    border-left: 1px solid var(--border-dark);
   }
   .invitados-table th:nth-child(7),
   .invitados-table td:nth-child(7) {
