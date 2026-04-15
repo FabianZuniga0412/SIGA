@@ -67,8 +67,12 @@ const closeActiveEventBtn = document.getElementById("closeActiveEventBtn");
 const auditBody = document.getElementById("auditBody");
 const eventosHistoryBody = document.getElementById("eventosHistoryBody");
 const eventosHistMeta = document.getElementById("eventosHistMeta");
+const eventosSelectedMeta = document.getElementById("eventosSelectedMeta");
+const activateSelectedEventBtn = document.getElementById("activateSelectedEventBtn");
+const cloneSelectedEventBtn = document.getElementById("cloneSelectedEventBtn");
 const reportesBody = document.getElementById("reportesBody");
 const reportExportHint = document.getElementById("reportExportHint");
+const reportStatusBanner = document.getElementById("reportStatusBanner");
 
 const eventoActualForm = document.getElementById("eventoActualForm");
 const eventoConfigSaveBtn = document.getElementById("eventoConfigSaveBtn");
@@ -107,6 +111,7 @@ let debugQrsState = { items: [], loaded: false };
 
 let adminState = null;
 let eventosState = { activeEventId: "", items: [], audit: [] };
+let selectedHistoryEventId = "";
 let invitadosState = {
   filters: { q: "" },
   page: 1,
@@ -149,6 +154,7 @@ init();
 function init() {
   bindUI();
   setupLectorAccess();
+  resetNuevoEventoFormDefaults();
   setView("dashboard");
   refreshAll();
   setInterval(refreshAll, 15000);
@@ -326,7 +332,7 @@ function bindUI() {
       setEventoConfigEditable(true);
       return;
     }
-    if (!eventoConfigDirty || eventoConfigSaving) return;
+    if (eventoConfigSaving) return;
     await submitEventoActualConfig();
   });
 
@@ -334,31 +340,43 @@ function bindUI() {
     event.preventDefault();
     await api("/api/eventos", { method: "POST", body: formToObject(nuevoEventoForm) });
     nuevoEventoForm.reset();
-    if (nuevoEventoForm.elements.timezone) nuevoEventoForm.elements.timezone.value = "America/Mexico_City";
+    resetNuevoEventoFormDefaults();
     await refreshAll();
     showGlobalNotice("Evento de planeación creado con éxito.", "success");
   });
 
-  eventosHistoryBody?.addEventListener("click", async (event) => {
-    const button = event.target.closest("button[data-event-action]");
-    if (!button) return;
-    const eventId = String(button.getAttribute("data-event-id") || "").trim();
-    const action = String(button.getAttribute("data-event-action") || "").trim();
+  eventosHistoryBody?.addEventListener("click", (event) => {
+    const row = event.target.closest("tr[data-event-id]");
+    if (!row) return;
+    const eventId = String(row.getAttribute("data-event-id") || "").trim();
     if (!eventId) return;
+    selectedHistoryEventId = eventId;
+    renderEventosHistory(eventosState.items, eventosState.activeEventId);
+  });
 
-    if (action === "publish") {
-      if (!confirm("¿Activar este evento como evento actual?")) return;
-      await api(`/api/eventos/${encodeURIComponent(eventId)}/publish`, { method: "POST" });
-      await refreshAll();
-      showGlobalNotice("Evento publicado como activo.", "success");
-      return;
-    }
+  activateSelectedEventBtn?.addEventListener("click", async () => {
+    const eventId = String(selectedHistoryEventId || "").trim();
+    if (!eventId) return;
+    if (!confirm("¿Activar este evento como evento actual?")) return;
+    await api(`/api/eventos/${encodeURIComponent(eventId)}/publish`, { method: "POST" });
+    await refreshAll();
+    showGlobalNotice("Evento publicado como activo.", "success");
+  });
 
-    if (action === "clone") {
-      await api(`/api/eventos/${encodeURIComponent(eventId)}/clone`, { method: "POST", body: {} });
-      await refreshAll();
-      showGlobalNotice("Evento clonado exitosamente.", "success");
-    }
+  cloneSelectedEventBtn?.addEventListener("click", () => {
+    const row = eventosState.items.find((x) => String(x.id_evento || "").trim() === String(selectedHistoryEventId || "").trim());
+    if (!row || !nuevoEventoForm) return;
+    const baseName = String(row.nombre || "").trim() || "Evento";
+    setInput(nuevoEventoForm, "nombre", `${baseName} (copia)`);
+    setInput(nuevoEventoForm, "ubicacion", row.ubicacion || "");
+    setInput(nuevoEventoForm, "aforo_max", row.aforo_max ?? "");
+    const inicioClonado = fromIsoToLocalInput(row.fecha_inicio) || toLocalInputValue(getTomorrowAt(9, 0));
+    const finClonado = fromIsoToLocalInput(row.fecha_fin) || toLocalInputValue(getTomorrowAt(11, 0));
+    setInput(nuevoEventoForm, "fecha_inicio", inicioClonado);
+    setInput(nuevoEventoForm, "fecha_fin", finClonado);
+    setInput(nuevoEventoForm, "timezone", row.timezone || "America/Mexico_City");
+    if (nuevoEventoForm.elements.nombre) nuevoEventoForm.elements.nombre.focus();
+    showGlobalNotice("Evento clonado al formulario. Puedes ajustar y guardar como Listo.", "success");
   });
 
   closeActiveEventBtn?.addEventListener("click", async () => {
@@ -595,6 +613,22 @@ function renderReportExportContext() {
     if (row && row.estado) estado = String(row.estado).trim().toLowerCase();
   }
   reportExportIsFinal = estado === "cerrado";
+  const eventoNombre = String(cfgEvento.nombre || "").trim() || "Evento sin nombre";
+  const eventoUbicacion = String(cfgEvento.ubicacion || "").trim();
+  const eventoId = String(cfgEvento.id_evento || "").trim();
+  const eventoRef = eventoId ? `${eventoNombre} (${eventoId})` : eventoNombre;
+
+  if (reportStatusBanner) {
+    reportStatusBanner.classList.remove("hidden", "final", "draft");
+    if (reportExportIsFinal) {
+      reportStatusBanner.classList.add("final");
+      reportStatusBanner.innerHTML = `<strong>Evento cerrado:</strong> ${escapeHtml(eventoRef)}${eventoUbicacion ? ` · ${escapeHtml(eventoUbicacion)}` : ""}. Este reporte es FINAL.`;
+    } else {
+      reportStatusBanner.classList.add("draft");
+      reportStatusBanner.innerHTML = `<strong>Evento en curso:</strong> ${escapeHtml(eventoRef)}${eventoUbicacion ? ` · ${escapeHtml(eventoUbicacion)}` : ""}. Este reporte es un corte al momento.`;
+    }
+  }
+
   if (reportExportHint) {
     reportExportHint.textContent = reportExportIsFinal
       ? "Evento cerrado: este reporte se considera final."
@@ -757,14 +791,21 @@ function filterDebugQrs(term) {
 }
 
 function renderDashboard(data) {
-  const aforoActual = Number(data.aforo_actual || 0);
-  const aforoMaximo = Number(data.aforo_maximo || 0);
+  const hasActiveEvent = Boolean(String(eventosState.activeEventId || "").trim());
+  const aforoActualRaw = Number(data.aforo_actual || 0);
+  const aforoMaximoRaw = Number(data.aforo_maximo || 0);
+  const aforoActual = hasActiveEvent ? aforoActualRaw : 0;
+  const aforoMaximo = hasActiveEvent ? aforoMaximoRaw : 0;
   const registrados = Number(data.total_invitados_registrados || 0);
   const pendientes = Number(data.invitados_pendientes || 0);
   const syncPendientes = Number(data.sincronizaciones_pendientes || 0);
+  const eventoNombre = hasActiveEvent ? String(data.evento_nombre || "").trim() || "Evento activo" : "Sin evento activo";
+  const eventoUbicacion = hasActiveEvent ? String(data.evento_ubicacion || "").trim() : "";
 
   setAforoState(aforoActual, aforoMaximo);
-  if (opsEventChip) opsEventChip.textContent = `Evento activo: ${data.evento_nombre || "Sin evento activo"}`;
+  if (opsEventChip) {
+    opsEventChip.textContent = hasActiveEvent ? `Evento activo: ${eventoNombre}` : "Sin evento activo";
+  }
   if (opsAforoChip) opsAforoChip.textContent = `Aforo: ${aforoActual} / ${aforoMaximo}`;
   metricRegistrados.textContent = String(registrados);
   metricPendientes.textContent = String(pendientes);
@@ -792,7 +833,7 @@ function renderDashboard(data) {
   }
 
   subheaderStatus.textContent = data.firebase_ready
-    ? `Evento: ${data.evento_nombre || "SIGA"}${data.evento_ubicacion ? ` · ${data.evento_ubicacion}` : ""}`
+    ? `Evento: ${eventoNombre}${eventoUbicacion ? ` · ${eventoUbicacion}` : ""}`
     : "Modo local sin Firebase";
 
   const ingresos = data.ultimos_ingresos || [];
@@ -915,6 +956,10 @@ async function ejecutarBatch(action) {
 function renderEventos(rows, activeEventId = "") {
   eventosState.items = rows || [];
   eventosState.activeEventId = activeEventId || "";
+  if (selectedHistoryEventId) {
+    const exists = eventosState.items.some((x) => String(x.id_evento || "").trim() === String(selectedHistoryEventId).trim());
+    if (!exists) selectedHistoryEventId = "";
+  }
 
   if (eventoActivoStatus) {
     const active = eventosState.items.find((x) => x.id_evento === eventosState.activeEventId);
@@ -932,16 +977,33 @@ function renderEventos(rows, activeEventId = "") {
 function renderEventosHistory(rows, activeEventId = "") {
   if (!eventosHistoryBody) return;
   const items = rows || [];
+  const hasSelected = items.some((x) => String(x.id_evento || "").trim() === String(selectedHistoryEventId || "").trim());
+  if (!hasSelected) selectedHistoryEventId = "";
+
+  if (activateSelectedEventBtn) {
+    activateSelectedEventBtn.disabled = !selectedHistoryEventId;
+  }
+  if (cloneSelectedEventBtn) {
+    cloneSelectedEventBtn.disabled = !selectedHistoryEventId;
+  }
+  if (eventosSelectedMeta) {
+    const selected = items.find((x) => String(x.id_evento || "").trim() === String(selectedHistoryEventId || "").trim());
+    eventosSelectedMeta.textContent = selected
+      ? `Seleccionado: ${selected.nombre || selected.id_evento}`
+      : "Selecciona un evento";
+  }
+
   eventosHistoryBody.innerHTML = items.length
     ? items
         .map((x) => {
           const id = String(x.id_evento || "").trim();
           const estadoRaw = String(x.estado || "borrador").toLowerCase();
           const isActive = id && id === String(activeEventId || "");
+          const isSelected = id && id === String(selectedHistoryEventId || "");
           const estadoLabel = isActive ? "Activo" : estadoRaw === "cerrado" ? "Cerrado" : "Listo";
           const estadoClass = isActive ? "activo" : estadoRaw === "cerrado" ? "cerrado" : "";
-          const activateDisabled = isActive || estadoRaw === "cerrado";
-          return `<tr>
+          return `<tr class="event-history-row ${isSelected ? "is-selected" : ""}" data-event-id="${escapeHtml(id)}">
+      <td><input type="radio" name="selectedEventHistory" ${isSelected ? "checked" : ""} aria-label="Seleccionar evento ${escapeHtml(id)}" /></td>
       <td>${escapeHtml(id)}</td>
       <td>${escapeHtml(x.nombre || "")}</td>
       <td>${escapeHtml(x.ubicacion || "")}</td>
@@ -949,18 +1011,31 @@ function renderEventosHistory(rows, activeEventId = "") {
       <td>${escapeHtml(formatIso(x.fecha_inicio) || "-")}</td>
       <td>${escapeHtml(formatIso(x.fecha_fin) || "-")}</td>
       <td><span class="status-badge ${estadoClass}">${escapeHtml(isActive ? "Activo" : estadoLabel)}</span></td>
-      <td>
-        <div class="inline-actions">
-          <button class="btn btn-primary btn-inline" data-event-action="publish" data-event-id="${escapeHtml(id)}" ${activateDisabled ? "disabled" : ""}>Activar</button>
-          <button class="btn btn-muted btn-inline" data-event-action="clone" data-event-id="${escapeHtml(id)}">Clonar</button>
-        </div>
-      </td>
     </tr>`;
         })
         .join("")
     : '<tr><td colspan="8" class="empty-row">Sin eventos registrados</td></tr>';
 
   if (eventosHistMeta) eventosHistMeta.textContent = `Total: ${items.length}`;
+}
+
+function toLocalInputValue(dateObj) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+}
+
+function getTomorrowAt(hour, minute = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+function resetNuevoEventoFormDefaults() {
+  if (!nuevoEventoForm) return;
+  setInput(nuevoEventoForm, "timezone", "America/Mexico_City");
+  setInput(nuevoEventoForm, "fecha_inicio", toLocalInputValue(getTomorrowAt(9, 0)));
+  setInput(nuevoEventoForm, "fecha_fin", toLocalInputValue(getTomorrowAt(11, 0)));
 }
 
 function renderAudit(rows) {
@@ -1168,23 +1243,34 @@ function updateEventoConfigDirtyState() {
   if (!eventoConfigSaveBtn || !eventoActualForm) return;
   const hasActiveEvent = Boolean(String(eventosState.activeEventId || "").trim());
   if (!hasActiveEvent) {
-    eventoConfigSaveBtn.textContent = "Cambiar Config";
+    eventoConfigSaveBtn.textContent = "No hay evento";
     eventoConfigSaveBtn.disabled = true;
     return;
   }
   if (!eventoConfigEditMode) {
-    eventoConfigSaveBtn.textContent = "Cambiar Config";
+    eventoConfigSaveBtn.textContent = "Modificar Configuración";
     eventoConfigSaveBtn.disabled = eventoConfigSaving;
     return;
   }
   eventoConfigSaveBtn.textContent = "Guardar Configuración";
-  eventoConfigSaveBtn.disabled = !eventoConfigDirty || eventoConfigSaving;
+  eventoConfigSaveBtn.disabled = eventoConfigSaving;
 }
 
 function captureEventoConfigBaseSnapshot() {
   eventoConfigBaseSnapshot = serializeEventoConfigForm();
   eventoConfigDirty = false;
   updateEventoConfigDirtyState();
+}
+
+function clearEventoConfigForm() {
+  if (!eventoActualForm) return;
+  setInput(eventoActualForm, "id_evento", "");
+  setInput(eventoActualForm, "nombre", "");
+  setInput(eventoActualForm, "ubicacion", "");
+  setInput(eventoActualForm, "aforo_max", "");
+  setInput(eventoActualForm, "fecha_inicio", "");
+  setInput(eventoActualForm, "fecha_fin", "");
+  setInput(eventoActualForm, "timezone", "America/Mexico_City");
 }
 
 function setEventoConfigEditable(enabled) {
@@ -1219,6 +1305,13 @@ async function submitEventoActualConfig() {
 function renderConfig(config) {
   const evento = config.evento_actual || {};
   if (!eventoActualForm) return;
+  const hasActiveEvent = Boolean(String(eventosState.activeEventId || "").trim());
+  if (!hasActiveEvent) {
+    setEventoConfigEditable(false);
+    clearEventoConfigForm();
+    captureEventoConfigBaseSnapshot();
+    return;
+  }
   if (eventoConfigDirty && !eventoConfigSaving) {
     updateEventoConfigDirtyState();
     return;

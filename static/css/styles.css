@@ -572,6 +572,35 @@ tbody tr:hover td {
   background: #fdfdff;
 }
 
+.event-history-row {
+  cursor: pointer;
+}
+
+.event-history-row.is-selected td {
+  background: #eef2ff;
+}
+
+.report-status-banner {
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  border: 1px solid transparent;
+}
+
+.report-status-banner.final {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #7f1d1d;
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
+
+.report-status-banner.draft {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e3a8a;
+}
+
 .table-footer {
   text-align: center;
   margin-top: 16px;
@@ -624,6 +653,15 @@ tbody tr:hover td {
 .inline-form input:focus,
 .inline-form select:focus {
   border-color: var(--primary);
+}
+
+.grid-form input:disabled,
+.grid-form select:disabled,
+.inline-form input:disabled,
+.inline-form select:disabled {
+  background: #e5e7eb;
+  color: #6b7280;
+  cursor: not-allowed;
 }
 
 /* Lectores */

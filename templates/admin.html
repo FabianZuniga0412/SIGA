@@ -349,7 +349,7 @@
             <div class="eventos-side stack-gap">
               <section class="card stack-gap">
                 <h2>Configuración del Evento Actual</h2>
-                <p class="form-intro">La configuración se mantiene protegida. Usa "Cambiar config" para habilitar edición del evento activo.</p>
+                <p class="form-intro">La configuración se mantiene protegida. Usa "Modificar Configuración" para habilitar edición del evento activo.</p>
                 <form id="eventoActualForm" class="grid-form two-cols evento-config-form">
                   <input name="id_evento" type="hidden" />
                   <div class="form-field">
@@ -390,7 +390,7 @@
                     </select>
                   </div>
 
-                  <button class="btn btn-primary evento-config-submit" id="eventoConfigSaveBtn" type="button" disabled>Cambiar Config</button>
+                  <button class="btn btn-primary evento-config-submit" id="eventoConfigSaveBtn" type="button" disabled>No hay evento</button>
                 </form>
               </section>
             </div>
@@ -458,10 +458,16 @@
                 </div>
                 <span id="eventosHistMeta" class="status-badge">Total: 0</span>
               </div>
+              <div class="action-row">
+                <span id="eventosSelectedMeta" class="status-badge">Selecciona un evento</span>
+                <button class="btn btn-primary" id="activateSelectedEventBtn" type="button" disabled>Activar seleccionado</button>
+                <button class="btn btn-muted" id="cloneSelectedEventBtn" type="button" disabled>Clonar a formulario</button>
+              </div>
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
+                      <th>Seleccionar</th>
                       <th>ID</th>
                       <th>Nombre</th>
                       <th>Ubicación</th>
@@ -469,7 +475,6 @@
                       <th>Inicio</th>
                       <th>Fin</th>
                       <th>Estado</th>
-                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody id="eventosHistoryBody">
@@ -666,6 +671,7 @@
 
           <section class="card stack-gap">
             <h2>Reporte del Evento</h2>
+            <div id="reportStatusBanner" class="report-status-banner hidden"></div>
             <p id="reportExportHint" class="section-subtitle">Puedes exportar en cualquier momento. Durante el evento se genera un corte al momento.</p>
             <form id="reportFilterForm" class="report-actions">
               <button class="btn btn-outline" type="button" id="reportExportCsv"><i class="ph-bold ph-file-csv"></i> CSV (Corte al momento)</button>
