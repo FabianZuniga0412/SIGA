@@ -213,11 +213,17 @@ function bindUI() {
       const payload = formToObject(inviteModalForm);
       payload.invitacion_enviada = !!inviteModalForm.elements.invitacion_enviada.checked;
       payload.cupo_total = MIN_CUPO_TOTAL;
-      await api("/api/invitados", { method: "POST", body: payload });
+      const created = await api("/api/invitados", { method: "POST", body: payload });
       inviteModal.classList.add("hidden");
       inviteModalForm.reset();
       await refreshInvitados();
-      showGlobalNotice("Invitado creado exitosamente.", "success");
+      if (created.email_requested && created.email_sent) {
+        showGlobalNotice("Invitado creado y correo enviado exitosamente.", "success");
+      } else if (created.email_requested && !created.email_sent) {
+        showGlobalNotice(`Invitado creado, pero no se pudo enviar correo: ${created.email_error || "Error desconocido"}`, "error");
+      } else {
+        showGlobalNotice("Invitado creado exitosamente.", "success");
+      }
     } catch (error) {
       showGlobalNotice(`No se pudo crear invitado: ${error.message}`, "error");
     }
@@ -1402,7 +1408,15 @@ async function handleImportFile(fileOverride = null) {
 
     uploadProgress.style.width = "100%";
     const s = data.summary || {};
-    uploadStatus.textContent = `Importación: insertados ${s.inserted || 0}, duplicados ${s.duplicated || 0}, inválidos ${s.invalid || 0}`;
+    uploadStatus.textContent = `Importación: insertados ${s.inserted || 0}, duplicados ${s.duplicated || 0}, inválidos ${s.invalid || 0} · Correos: enviados ${s.email_sent || 0}, fallidos ${s.email_failed || 0}`;
+    if (Number(s.email_failed || 0) > 0 || data.email_queue_error) {
+      showGlobalNotice(
+        `Importación completada, pero hubo fallas de correo (${s.email_failed || 0}). ${data.email_queue_error ? `Detalle SMTP: ${data.email_queue_error}` : ""}`.trim(),
+        "error"
+      );
+    } else if (Number(s.email_sent || 0) > 0) {
+      showGlobalNotice(`Importación y envío de correos completados. Enviados: ${s.email_sent || 0}.`, "success");
+    }
 
     if (data.error_report_csv) {
       const blob = new Blob([data.error_report_csv], { type: "text/csv;charset=utf-8;" });

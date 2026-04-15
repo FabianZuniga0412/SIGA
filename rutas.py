@@ -346,8 +346,31 @@ def api_invitados():
         return jsonify({"ok": False, "error": {"field": "duplicate", "message": "Invitado ya existe", "conflict": {"id_conflict_key": key}}}), 409
 
     payload["creado_en"] = funciones_extras.now_iso()
+    email_requested = bool(payload.get("invitacion_enviada", False))
+    email_sent = False
+    email_error = ""
+    if email_requested:
+        client, smtp_error = funciones_extras.smtp_client()
+        if smtp_error:
+            email_error = str(smtp_error)
+        else:
+            try:
+                send_error = funciones_extras.enviar_invitacion_email(client, payload, key)
+                if send_error:
+                    email_error = str(send_error)
+                else:
+                    email_sent = True
+            finally:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+    payload["invitacion_enviada"] = email_sent if email_requested else False
     firebase.db.reference(f"invitados/{key}").set(payload)
-    return jsonify({"ok": True, "key": key, "invitado": payload})
+    response = {"ok": True, "key": key, "invitado": payload, "email_requested": email_requested, "email_sent": email_sent}
+    if email_error:
+        response["email_error"] = email_error
+    return jsonify(response)
 
 @rutas_bp.route("/api/invitados/<invitado_key>", methods=["PUT"])
 def api_actualizar_invitado(invitado_key):
@@ -439,6 +462,7 @@ def api_importar_invitados():
     duplicated = 0
     invalid = 0
     errors = []
+    inserted_keys = []
 
     def get_col(row, *keys):
         for key in keys:
@@ -454,7 +478,8 @@ def api_importar_invitados():
             # En importación también se crea con cupo base fijo.
             "cupo_total": funciones_extras.MIN_CUPO_TOTAL,
             "tipo_invitado": row.get("tipo_invitado", "general"),
-            "invitacion_enviada": funciones_extras.parse_bool_param(str(row.get("invitacion_enviada", ""))) is True,
+            # En importación masiva, la invitación se envía automáticamente en cola.
+            "invitacion_enviada": False,
         }
 
         payload, error = funciones_extras.validar_datos_invitado(row_data, invitados, exclude_key=None, require_required=True)
@@ -479,7 +504,49 @@ def api_importar_invitados():
         invitados[key] = payload
         id_index[id_norm] = key
         email_index[email_norm] = key
+        inserted_keys.append(key)
         inserted += 1
+
+    email_sent = 0
+    email_failed = 0
+    email_errors = []
+    email_queue_error = ""
+    if inserted_keys:
+        client, smtp_error = funciones_extras.smtp_client()
+        if smtp_error:
+            email_queue_error = str(smtp_error)
+            email_failed = len(inserted_keys)
+        else:
+            try:
+                delay_seconds = max(float(os.getenv("IMPORT_EMAIL_DELAY_SECONDS", "0.35")), 0.0)
+            except Exception:
+                delay_seconds = 0.35
+            try:
+                total = len(inserted_keys)
+                for idx, key in enumerate(inserted_keys, start=1):
+                    invitado = invitados.get(key)
+                    if not isinstance(invitado, dict):
+                        email_failed += 1
+                        if len(email_errors) < 200:
+                            email_errors.append({"key": key, "error": "Invitado no encontrado para envío"})
+                    else:
+                        send_error = funciones_extras.enviar_invitacion_email(client, invitado, key)
+                        if send_error:
+                            email_failed += 1
+                            if len(email_errors) < 200:
+                                email_errors.append({"key": key, "id": invitado.get("id", ""), "email": invitado.get("email", ""), "error": str(send_error)})
+                        else:
+                            email_sent += 1
+                            invitado["invitacion_enviada"] = True
+                            firebase.db.reference(f"invitados/{key}").update({"invitacion_enviada": True})
+
+                    if delay_seconds > 0 and idx < total:
+                        time.sleep(delay_seconds)
+            finally:
+                try:
+                    client.close()
+                except Exception:
+                    pass
 
     error_csv = ""
     if errors:
@@ -499,8 +566,13 @@ def api_importar_invitados():
                 "duplicated": duplicated,
                 "invalid": invalid,
                 "errors": len(errors),
+                "email_requested": len(inserted_keys),
+                "email_sent": email_sent,
+                "email_failed": email_failed,
             },
             "errors": errors[:200],
+            "email_queue_error": email_queue_error,
+            "email_errors": email_errors,
             "error_report_csv": error_csv,
         }
     )

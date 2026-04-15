@@ -799,6 +799,7 @@ tbody tr:hover td {
 .invitados-table th:nth-child(4),
 .invitados-table td:nth-child(4) {
   min-width: 220px;
+  padding-right: 24px;
 }
 
 .invitados-table th:nth-child(5),
@@ -806,6 +807,11 @@ tbody tr:hover td {
 .invitados-table th:nth-child(6),
 .invitados-table td:nth-child(6) {
   width: 72px;
+}
+
+.invitados-table th:nth-child(5),
+.invitados-table td:nth-child(5) {
+  padding-left: 16px;
 }
 
 .invitados-table th:nth-child(7),
@@ -894,6 +900,11 @@ tbody tr:hover td {
   .invitados-table th:nth-child(4),
   .invitados-table td:nth-child(4) {
     width: 210px;
+    padding-right: 18px;
+  }
+  .invitados-table th:nth-child(5),
+  .invitados-table td:nth-child(5) {
+    padding-left: 12px;
   }
   .invitados-table th:nth-child(7),
   .invitados-table td:nth-child(7) {
