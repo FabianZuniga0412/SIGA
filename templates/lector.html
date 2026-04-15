@@ -50,7 +50,7 @@
         <div id="guestInfo" class="guest-info">
           <p class="placeholder-text">Enfoca un código QR para escanear</p>
         </div>
-        <div class="guest-actions-row">
+        <div id="guestActionsRow" class="guest-actions-row hidden" aria-hidden="true">
           <button id="btnPlusOne" class="btn btn-primary" type="button" disabled>+1</button>
           <button id="btnPlusTwo" class="btn btn-primary" type="button" disabled>+2</button>
           <button id="btnAll" class="btn btn-primary" type="button" disabled>Todos</button>
@@ -59,10 +59,10 @@
       </section>
 
       <footer class="lector-footer">
-        <div class="footer-row">
+        <div id="footerControls" class="footer-row">
+          <button id="btnManualCapture" class="btn btn-primary btn-manual-capture hidden" type="button" disabled>Tomar foto y validar</button>
           <button id="btnStart" class="btn btn-muted" type="button">Pausar camara</button>
           <button id="btnFlash" class="btn btn-muted" type="button" disabled>Flash</button>
-          <button id="btnManualCapture" class="btn btn-primary hidden" type="button" disabled>Tomar foto y validar</button>
         </div>
       </footer>
 

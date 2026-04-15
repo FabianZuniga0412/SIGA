@@ -19,10 +19,12 @@ const lectorPinLoginBtn = document.getElementById("lectorPinLoginBtn");
 const lectorPinError = document.getElementById("lectorPinError");
 
 const guestInfo = document.getElementById("guestInfo");
+const guestActionsRow = document.getElementById("guestActionsRow");
 const btnPlusOne = document.getElementById("btnPlusOne");
 const btnPlusTwo = document.getElementById("btnPlusTwo");
 const btnAll = document.getElementById("btnAll");
 const btnCancelGuest = document.getElementById("btnCancelGuest");
+const footerControls = document.getElementById("footerControls");
 
 let stream = null;
 let currentValidatedGuest = null;
@@ -38,6 +40,8 @@ let qrDetector = null;
 let detectorWarningShown = false;
 let manualCaptureMode = false;
 let heartbeatIntervalId = null;
+let detectorFailureCount = 0;
+let confirmationToastTimeoutId = null;
 const deviceId = getOrCreateDeviceId();
 
 btnStart?.addEventListener("click", toggleCamera);
@@ -67,7 +71,7 @@ init();
 
 async function init() {
   setConnectionStatus(navigator.onLine ? "nube" : "local");
-  setupQrDetector();
+  await setupQrDetector();
   renderDetectorSupportState();
   await ensureLectorLogin();
   await refreshLectorEstado();
@@ -75,8 +79,23 @@ async function init() {
   startHeartbeat();
 }
 
-function setupQrDetector() {
+async function setupQrDetector() {
+  qrDetector = null;
+  detectorFailureCount = 0;
   if (typeof window.BarcodeDetector !== "function") return;
+
+  if (typeof window.BarcodeDetector.getSupportedFormats === "function") {
+    try {
+      const supportedFormats = await window.BarcodeDetector.getSupportedFormats();
+      if (Array.isArray(supportedFormats) && !supportedFormats.includes("qr_code")) {
+        return;
+      }
+    } catch (_error) {
+      // Si el navegador expone la API pero falla al consultar formatos,
+      // todavía intentamos construir el detector y degradamos después si falla.
+    }
+  }
+
   try {
     qrDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
   } catch (_error) {
@@ -86,6 +105,7 @@ function setupQrDetector() {
 
 function renderDetectorSupportState() {
   manualCaptureMode = !qrDetector;
+  footerControls?.classList.toggle("manual-capture-priority", manualCaptureMode);
   if (!manualCaptureMode) {
     btnManualCapture?.classList.add("hidden");
     return;
@@ -101,6 +121,13 @@ function renderDetectorSupportState() {
   });
   btnCancelGuest?.classList.add("hidden");
   updateManualCaptureAvailability();
+}
+
+function fallbackToManualCapture() {
+  qrDetector = null;
+  detectorFailureCount = 0;
+  renderDetectorSupportState();
+  resetGuestPanel();
 }
 
 function getOrCreateDeviceId() {
@@ -517,8 +544,13 @@ async function detectQrInCanvas() {
   if (!qrDetector) return false;
   try {
     const found = await qrDetector.detect(canvas);
+    detectorFailureCount = 0;
     return Array.isArray(found) && found.length > 0;
   } catch (_error) {
+    detectorFailureCount += 1;
+    if (detectorFailureCount >= 3) {
+      fallbackToManualCapture();
+    }
     return false;
   }
 }
@@ -658,9 +690,11 @@ function hideProcessing() {
 
 function resetGuestPanel() {
   currentValidatedGuest = null;
+  guestActionsRow?.classList.add("hidden");
+  guestActionsRow?.setAttribute("aria-hidden", "true");
   if (guestInfo) {
     guestInfo.innerHTML = manualCaptureMode
-      ? `<p class="placeholder-text">Presiona "Tomar foto y validar" para capturar el QR</p>`
+      ? `<p class="placeholder-text">Presiona "Tomar foto y validar" para capturar el QR. Las acciones de ingreso aparecerán después de validarlo.</p>`
       : `<p class="placeholder-text">Enfoca un código QR para escanear</p>`;
   }
   btnCancelGuest?.classList.add("hidden");
@@ -676,6 +710,8 @@ function resetGuestPanel() {
 function showGuestSnapshot(guest, statusText = "") {
   const disponibles = Math.max(Number(guest.cupoTotal || 0) - Number(guest.cupoUsado || 0), 0);
   currentValidatedGuest = null;
+  guestActionsRow?.classList.add("hidden");
+  guestActionsRow?.setAttribute("aria-hidden", "true");
   guestInfo.innerHTML = `
     <h3>QR detectado</h3>
     <p><strong>${escapeHtml(guest.nombre)}</strong></p>
@@ -706,6 +742,8 @@ function showGuestActions(guest) {
   const allowAll = disponibles >= 1;
 
   currentValidatedGuest = guest;
+  guestActionsRow?.classList.remove("hidden");
+  guestActionsRow?.setAttribute("aria-hidden", "false");
 
   guestInfo.innerHTML = `
     <h3>Invitación válida</h3>
@@ -940,14 +978,36 @@ async function registrarIngreso(invitadoId, invitadoKey, modo, usadosAntes = 0, 
 }
 
 function showConfirmation(cantidad) {
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.textContent = `Bienvenidos (+${cantidad})`;
-  document.body.appendChild(toast);
+  const normalizedCantidad = Math.max(Number(cantidad || 0), 1);
+  let toast = document.getElementById("confirmationToast");
 
-  setTimeout(() => {
-    toast.remove();
-  }, 1400);
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "confirmationToast";
+    toast.className = "lector-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    document.body.appendChild(toast);
+  }
+
+  toast.innerHTML = `
+    <div class="lector-toast-icon" aria-hidden="true">✓</div>
+    <div class="lector-toast-copy">
+      <strong>Ingreso confirmado</strong>
+      <span>${normalizedCantidad === 1 ? "Se registró 1 acceso." : `Se registraron ${normalizedCantidad} accesos.`}</span>
+    </div>
+  `;
+
+  toast.classList.add("is-visible");
+
+  if (confirmationToastTimeoutId) {
+    window.clearTimeout(confirmationToastTimeoutId);
+  }
+
+  confirmationToastTimeoutId = window.setTimeout(() => {
+    toast.classList.remove("is-visible");
+    confirmationToastTimeoutId = null;
+  }, 1900);
 }
 
 async function toggleFlash() {
