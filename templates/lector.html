@@ -6,7 +6,7 @@
     <title>SIGA - Lector QR</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
   </head>
-  <body class="lector-body">
+  <body class="lector-body" data-demo-mode="{{ 'true' if demo_mode else 'false' }}">
     <main class="lector-app">
       <header class="lector-header">
         <div>
@@ -60,6 +60,9 @@
 
       <footer class="lector-footer">
         <div class="footer-row">
+          {% if demo_mode %}
+          <button id="openLectorTourBtn" class="btn btn-outline" type="button">Ver guia</button>
+          {% endif %}
           <button id="btnStart" class="btn btn-muted" type="button">Pausar camara</button>
           <button id="btnFlash" class="btn btn-muted" type="button" disabled>Flash</button>
         </div>
@@ -87,6 +90,9 @@
       </div>
     </main>
 
+    <script>
+      window.SIGA_DEMO = {{ 'true' if demo_mode else 'false' }};
+    </script>
     <script src="{{ url_for('static', filename='js/lector.js') }}"></script>
   </body>
 </html>

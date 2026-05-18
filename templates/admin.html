@@ -14,7 +14,7 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
   </head>
-  <body class="admin-body">
+  <body class="admin-body" data-demo-mode="{{ 'true' if demo_mode else 'false' }}">
     <div class="admin-layout">
       <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
       <aside class="sidebar">
@@ -55,6 +55,11 @@
             <p id="subheaderStatus">Monitoreo en tiempo real</p>
           </div>
           <div class="header-profile" style="gap: 24px;">
+            {% if demo_mode %}
+            <button id="openDemoTourBtn" class="btn btn-muted" type="button">
+              <i class="ph ph-compass-tool"></i> Ver guia
+            </button>
+            {% endif %}
             <button id="openInviteModal" class="btn btn-primary" style="box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);">
               <i class="ph-bold ph-plus"></i> Nuevo Invitado
             </button>
@@ -807,6 +812,9 @@
       </div>
     </div>
 
+    <script>
+      window.SIGA_DEMO = {{ 'true' if demo_mode else 'false' }};
+    </script>
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
   </body>
 </html>

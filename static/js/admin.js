@@ -15,6 +15,7 @@ const notificationCountBadge = document.getElementById("notificationCountBadge")
 const notificationsPanel = document.getElementById("notificationsPanel");
 const notificationsBody = document.getElementById("notificationsBody");
 const clearNotificationsBtn = document.getElementById("clearNotificationsBtn");
+const openDemoTourBtn = document.getElementById("openDemoTourBtn");
 
 const openInviteModalBtn = document.getElementById("openInviteModal");
 const closeInviteModalBtn = document.getElementById("closeInviteModal");
@@ -103,6 +104,10 @@ const reportExportCsv = document.getElementById("reportExportCsv");
 const reportExportPdf = document.getElementById("reportExportPdf");
 const MIN_CUPO_TOTAL = 3;
 const IMPORT_ALLOWED_EXTENSIONS = [".csv", ".xlsx", ".xls"];
+const isDemoMode = Boolean(window.SIGA_DEMO);
+const DEMO_TOUR_ADMIN_SEEN_KEY = "siga_demo_tour_admin_seen";
+let demoTourAutoStarted = false;
+let demoTourState = null;
 
 const debugQrsSearch = document.getElementById("debugQrsSearch");
 const debugQrsRefreshBtn = document.getElementById("debugQrsRefreshBtn");
@@ -162,6 +167,7 @@ function init() {
   setView("dashboard");
   refreshAll();
   setInterval(refreshAll, 15000);
+  openDemoTourBtn?.addEventListener("click", () => startAdminDemoTour({ force: true }));
 }
 
 function isMobileViewport() {
@@ -631,9 +637,150 @@ async function refreshAll() {
     renderReportExportContext();
     await refreshEventosAudit();
     await Promise.all([refreshDashboard(), refreshInvitados(), refreshSolicitudesCupo()]);
+    maybeStartAdminDemoTour();
   } catch (error) {
     showGlobalNotice(`Error cargando estado: ${error.message}`, "error");
   }
+}
+
+function maybeStartAdminDemoTour() {
+  if (!isDemoMode || demoTourAutoStarted) return;
+  demoTourAutoStarted = true;
+  if (window.localStorage.getItem(DEMO_TOUR_ADMIN_SEEN_KEY) === "true") return;
+  window.setTimeout(() => startAdminDemoTour({ force: false }), 350);
+}
+
+function adminTourSteps() {
+  return [
+    {
+      view: "dashboard",
+      selector: ".hero-event-card",
+      title: "Panel de control",
+      copy: "Aqui ves el estado general del evento: aforo, actividad reciente y lectores conectados. Empieza aqui para entender la demo en menos de un minuto.",
+    },
+    {
+      view: "invitados",
+      selector: "#view-invitados .invitados-actions-row",
+      title: "Invitados",
+      copy: "En esta pantalla puedes buscar, crear, exportar y enviar invitaciones. Para una prueba rapida, crea un invitado o exporta el listado actual.",
+    },
+    {
+      view: "eventos",
+      selector: "#eventoActivoStatus",
+      title: "Eventos",
+      copy: "Aqui cambias el evento activo y revisas su historial. Es la parte que controla el contexto operativo que usa el lector.",
+    },
+    {
+      view: "lectores",
+      selector: "#lectorAccessQr",
+      title: "Lectores y acceso movil",
+      copy: "Desde aqui compartes el portal lector en otro dispositivo. Escanea el QR o abre el enlace para probar el flujo de acceso.",
+    },
+    {
+      view: "reportes",
+      selector: "#reportFilterForm",
+      title: "Reportes",
+      copy: "Este bloque resume entradas, salidas y capacidad. Usa CSV o PDF para enseñar rapidamente el resultado operativo de la demo.",
+    },
+  ];
+}
+
+async function startAdminDemoTour({ force = false } = {}) {
+  if (!isDemoMode) return;
+  if (demoTourState && !force) return;
+  closeAdminDemoTour({ persistSeen: !force });
+  demoTourState = {
+    steps: adminTourSteps(),
+    index: 0,
+    force,
+  };
+  await showAdminDemoTourStep();
+}
+
+async function showAdminDemoTourStep() {
+  if (!demoTourState) return;
+  const step = demoTourState.steps[demoTourState.index];
+  if (!step) {
+    closeAdminDemoTour({ persistSeen: true });
+    return;
+  }
+  setView(step.view);
+  await delay(260);
+  const target = document.querySelector(step.selector);
+  if (!target) {
+    demoTourState.index += 1;
+    await showAdminDemoTourStep();
+    return;
+  }
+  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  await delay(180);
+  renderDemoTourLayer({
+    scope: "admin",
+    title: step.title,
+    copy: step.copy,
+    stepIndex: demoTourState.index,
+    stepCount: demoTourState.steps.length,
+    target,
+    onNext: async () => {
+      demoTourState.index += 1;
+      await showAdminDemoTourStep();
+    },
+    onPrev: async () => {
+      demoTourState.index = Math.max(demoTourState.index - 1, 0);
+      await showAdminDemoTourStep();
+    },
+    onClose: () => closeAdminDemoTour({ persistSeen: true }),
+    onDismiss: () => closeAdminDemoTour({ persistSeen: true }),
+  });
+}
+
+function closeAdminDemoTour({ persistSeen = true } = {}) {
+  if (persistSeen) window.localStorage.setItem(DEMO_TOUR_ADMIN_SEEN_KEY, "true");
+  destroyDemoTourLayer();
+  demoTourState = null;
+}
+
+function renderDemoTourLayer({ scope, title, copy, stepIndex, stepCount, target, onNext, onPrev, onClose, onDismiss }) {
+  destroyDemoTourLayer();
+  const rect = target.getBoundingClientRect();
+  const overlay = document.createElement("div");
+  overlay.className = "demo-tour-overlay";
+
+  const highlight = document.createElement("div");
+  highlight.className = "demo-tour-highlight";
+  highlight.style.top = `${Math.max(rect.top - 10, 8)}px`;
+  highlight.style.left = `${Math.max(rect.left - 10, 8)}px`;
+  highlight.style.width = `${Math.min(rect.width + 20, window.innerWidth - 16)}px`;
+  highlight.style.height = `${Math.min(rect.height + 20, window.innerHeight - 16)}px`;
+
+  const dialog = document.createElement("div");
+  dialog.className = "demo-tour-dialog";
+  dialog.innerHTML = `
+    <div class="demo-tour-kicker"><i class="ph ph-compass-tool"></i> Recorrido demo</div>
+    <div class="demo-tour-title">${escapeHtml(title)}</div>
+    <div class="demo-tour-copy">${escapeHtml(copy)}</div>
+    <div class="demo-tour-progress">Paso ${stepIndex + 1} de ${stepCount} · ${scope === "admin" ? "Panel admin" : "Lector QR"}</div>
+    <div class="demo-tour-actions">
+      <button class="btn btn-outline" data-tour-dismiss="true" type="button">No mostrar de nuevo</button>
+      <div class="demo-tour-actions-main">
+        <button class="btn btn-muted" data-tour-prev="true" type="button" ${stepIndex === 0 ? "disabled" : ""}>Anterior</button>
+        <button class="btn btn-secondary" data-tour-close="true" type="button">Cerrar</button>
+        <button class="btn btn-primary" data-tour-next="true" type="button">${stepIndex === stepCount - 1 ? "Finalizar" : "Siguiente"}</button>
+      </div>
+    </div>
+  `;
+  dialog.querySelector("[data-tour-next='true']")?.addEventListener("click", onNext);
+  dialog.querySelector("[data-tour-prev='true']")?.addEventListener("click", onPrev);
+  dialog.querySelector("[data-tour-close='true']")?.addEventListener("click", onClose);
+  dialog.querySelector("[data-tour-dismiss='true']")?.addEventListener("click", onDismiss);
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(highlight);
+  document.body.appendChild(dialog);
+}
+
+function destroyDemoTourLayer() {
+  document.querySelectorAll(".demo-tour-overlay, .demo-tour-highlight, .demo-tour-dialog").forEach((node) => node.remove());
 }
 
 function renderReportExportContext() {

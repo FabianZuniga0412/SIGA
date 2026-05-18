@@ -22,6 +22,11 @@ const btnPlusOne = document.getElementById("btnPlusOne");
 const btnPlusTwo = document.getElementById("btnPlusTwo");
 const btnAll = document.getElementById("btnAll");
 const btnCancelGuest = document.getElementById("btnCancelGuest");
+const openLectorTourBtn = document.getElementById("openLectorTourBtn");
+const isDemoMode = Boolean(window.SIGA_DEMO);
+const DEMO_TOUR_LECTOR_SEEN_KEY = "siga_demo_tour_lector_seen";
+let lectorTourState = null;
+let lectorTourAutoStarted = false;
 
 let stream = null;
 let currentValidatedGuest = null;
@@ -70,6 +75,8 @@ async function init() {
   await refreshLectorEstado();
   setInterval(refreshLectorEstado, 20000);
   startHeartbeat();
+  openLectorTourBtn?.addEventListener("click", () => startLectorDemoTour({ force: true }));
+  maybeStartLectorDemoTour();
 }
 
 function setupQrDetector() {
@@ -189,6 +196,14 @@ function setLectorHeader() {
 }
 
 async function ensureLectorLogin() {
+  if (isDemoMode) {
+    hidePinError();
+    clearPinInputs();
+    pinLoginModal.classList.add("hidden");
+    const autoLogin = await tryAdminAutoLogin();
+    if (autoLogin) setLectorHeader();
+    return;
+  }
   hidePinError();
   clearPinInputs();
   const autoLogin = await tryAdminAutoLogin();
@@ -294,6 +309,17 @@ async function handleLectorSessionExpired() {
   stopAutoScanLoop();
   stopCamera();
   currentLector = { uid: "", nombre: "", rol: "" };
+  if (isDemoMode) {
+    const autoLogin = await tryAdminAutoLogin();
+    if (autoLogin) {
+      hidePinError();
+      pinLoginModal.classList.add("hidden");
+      setLectorHeader();
+      await refreshLectorEstado();
+      await startCamera();
+    }
+    return;
+  }
   const autoLogin = await tryAdminAutoLogin();
   if (autoLogin) {
     hidePinError();
@@ -310,7 +336,7 @@ async function handleLectorSessionExpired() {
 }
 
 async function refreshLectorEstado() {
-  if (pinLoginModal && !pinLoginModal.classList.contains("hidden")) return;
+  if (!isDemoMode && pinLoginModal && !pinLoginModal.classList.contains("hidden")) return;
   try {
     const res = await fetch("/api/lector_estado");
     if (res.status === 401) {
@@ -321,7 +347,7 @@ async function refreshLectorEstado() {
     if (!res.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${res.status}`);
 
     const data = payload.data || {};
-    if (data.requires_pin) {
+    if (data.requires_pin && !isDemoMode) {
       await handleLectorSessionExpired();
       return;
     }
@@ -345,7 +371,7 @@ async function refreshLectorEstado() {
 }
 
 async function toggleCamera() {
-  if (!pinLoginModal.classList.contains("hidden")) return;
+  if (!isDemoMode && !pinLoginModal.classList.contains("hidden")) return;
   if (stream) {
     stopCamera();
     return;
@@ -949,4 +975,127 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function maybeStartLectorDemoTour() {
+  if (!isDemoMode || lectorTourAutoStarted) return;
+  lectorTourAutoStarted = true;
+  if (window.localStorage.getItem(DEMO_TOUR_LECTOR_SEEN_KEY) === "true") return;
+  window.setTimeout(() => startLectorDemoTour({ force: false }), 400);
+}
+
+function lectorTourSteps() {
+  return [
+    {
+      selector: ".lector-header",
+      title: "Estado del evento",
+      copy: "Aqui ves nombre del evento, conexion y aforo actual. Sirve para confirmar que el lector esta listo antes de escanear.",
+    },
+    {
+      selector: "#cameraStage",
+      title: "Camara y escaneo",
+      copy: "Esta es la zona de lectura QR. Apunta al codigo y la demo intentara validarlo automaticamente.",
+    },
+    {
+      selector: ".guest-actions-row",
+      title: "Acciones de ingreso",
+      copy: "Cuando un QR es valido, aqui eliges si entra una persona, dos o todo el cupo disponible.",
+    },
+    {
+      selector: "#guestPanel",
+      title: "Resultado y soporte",
+      copy: "En este panel veras el resumen del invitado y, si hace falta, podras solicitar mas cupo durante la prueba.",
+    },
+  ];
+}
+
+async function startLectorDemoTour({ force = false } = {}) {
+  if (!isDemoMode) return;
+  if (lectorTourState && !force) return;
+  closeLectorDemoTour({ persistSeen: !force });
+  lectorTourState = { steps: lectorTourSteps(), index: 0 };
+  await showLectorDemoTourStep();
+}
+
+async function showLectorDemoTourStep() {
+  if (!lectorTourState) return;
+  const step = lectorTourState.steps[lectorTourState.index];
+  if (!step) {
+    closeLectorDemoTour({ persistSeen: true });
+    return;
+  }
+  const target = document.querySelector(step.selector);
+  if (!target) {
+    lectorTourState.index += 1;
+    await showLectorDemoTourStep();
+    return;
+  }
+  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  await delay(180);
+  renderLectorDemoTourLayer({
+    title: step.title,
+    copy: step.copy,
+    stepIndex: lectorTourState.index,
+    stepCount: lectorTourState.steps.length,
+    target,
+    onNext: async () => {
+      lectorTourState.index += 1;
+      await showLectorDemoTourStep();
+    },
+    onPrev: async () => {
+      lectorTourState.index = Math.max(lectorTourState.index - 1, 0);
+      await showLectorDemoTourStep();
+    },
+    onClose: () => closeLectorDemoTour({ persistSeen: true }),
+    onDismiss: () => closeLectorDemoTour({ persistSeen: true }),
+  });
+}
+
+function closeLectorDemoTour({ persistSeen = true } = {}) {
+  if (persistSeen) window.localStorage.setItem(DEMO_TOUR_LECTOR_SEEN_KEY, "true");
+  destroyLectorDemoTourLayer();
+  lectorTourState = null;
+}
+
+function renderLectorDemoTourLayer({ title, copy, stepIndex, stepCount, target, onNext, onPrev, onClose, onDismiss }) {
+  destroyLectorDemoTourLayer();
+  const rect = target.getBoundingClientRect();
+  const overlay = document.createElement("div");
+  overlay.className = "demo-tour-overlay";
+
+  const highlight = document.createElement("div");
+  highlight.className = "demo-tour-highlight";
+  highlight.style.top = `${Math.max(rect.top - 10, 8)}px`;
+  highlight.style.left = `${Math.max(rect.left - 10, 8)}px`;
+  highlight.style.width = `${Math.min(rect.width + 20, window.innerWidth - 16)}px`;
+  highlight.style.height = `${Math.min(rect.height + 20, window.innerHeight - 16)}px`;
+
+  const dialog = document.createElement("div");
+  dialog.className = "demo-tour-dialog";
+  dialog.innerHTML = `
+    <div class="demo-tour-kicker"><i class="ph ph-compass-tool"></i> Recorrido demo</div>
+    <div class="demo-tour-title">${escapeHtml(title)}</div>
+    <div class="demo-tour-copy">${escapeHtml(copy)}</div>
+    <div class="demo-tour-progress">Paso ${stepIndex + 1} de ${stepCount} · Lector QR</div>
+    <div class="demo-tour-actions">
+      <button class="btn btn-outline" data-tour-dismiss="true" type="button">No mostrar de nuevo</button>
+      <div class="demo-tour-actions-main">
+        <button class="btn btn-muted" data-tour-prev="true" type="button" ${stepIndex === 0 ? "disabled" : ""}>Anterior</button>
+        <button class="btn btn-secondary" data-tour-close="true" type="button">Cerrar</button>
+        <button class="btn btn-primary" data-tour-next="true" type="button">${stepIndex === stepCount - 1 ? "Finalizar" : "Siguiente"}</button>
+      </div>
+    </div>
+  `;
+  dialog.querySelector("[data-tour-next='true']")?.addEventListener("click", onNext);
+  dialog.querySelector("[data-tour-prev='true']")?.addEventListener("click", onPrev);
+  dialog.querySelector("[data-tour-close='true']")?.addEventListener("click", onClose);
+  dialog.querySelector("[data-tour-dismiss='true']")?.addEventListener("click", onDismiss);
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(highlight);
+  document.body.appendChild(dialog);
+}
+
+function destroyLectorDemoTourLayer() {
+  document.querySelectorAll(".demo-tour-overlay, .demo-tour-highlight, .demo-tour-dialog").forEach((node) => node.remove());
 }

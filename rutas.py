@@ -23,6 +23,8 @@ import qr_lector
 @rutas_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
+        if funciones_extras.DEMO_MODE:
+            return redirect(url_for("rutas.admin"))
         if funciones_extras.admin_logueado():
             return redirect(url_for("rutas.admin"))
         return render_template("login.html")
@@ -42,21 +44,25 @@ def login():
 
 @rutas_bp.route("/logout")
 def logout():
+    if funciones_extras.DEMO_MODE:
+        funciones_extras.lector_logout_session()
+        session["admin_ok"] = True
+        session["admin_user"] = funciones_extras.ADMIN_USER
+        session.permanent = True
+        return redirect(url_for("rutas.admin"))
     session.clear()
     return redirect(url_for("rutas.login"))
 
 @rutas_bp.route("/admin")
 def admin():
-    if not funciones_extras.admin_logueado():
+    if not funciones_extras.DEMO_MODE and not funciones_extras.admin_logueado():
         return redirect(url_for("rutas.login"))
     return render_template("admin.html")
 
 @rutas_bp.route("/")
 def home():
     if funciones_extras.DEMO_MODE:
-        session.permanent = True
-        session["admin_ok"] = True
-        session["admin_user"] = funciones_extras.ADMIN_USER
+        funciones_extras.admin_logueado()
         return redirect(url_for("rutas.admin"))
     if funciones_extras.admin_logueado():
         return redirect(url_for("rutas.admin"))
@@ -142,25 +148,27 @@ def api_lector_login():
 
 @rutas_bp.route("/api/lector/admin_login", methods=["POST"])
 def api_lector_admin_login():
-    if not funciones_extras.admin_logueado():
+    if not funciones_extras.DEMO_MODE and not funciones_extras.admin_logueado():
         return jsonify({"ok": False, "error": "No autorizado", "code": "ADMIN_REQUIRED"}), 401
 
     payload = request.get_json(silent=True) or {}
     device_id = funciones_extras.normalize_device_id(payload.get("device_id"))
     modo = str(payload.get("modo") or "online").strip().lower()
-    admin_user = str(session.get("admin_user") or funciones_extras.ADMIN_USER).strip() or funciones_extras.ADMIN_USER
-
-    now = funciones_extras.now_iso()
-    lector = {
-        "uid": f"admin_{admin_user}",
-        "nombre": f"{admin_user} (admin)",
-        "rol": "admin",
-        "pin": "",
-        "device_id": device_id,
-        "login_at": now,
-        "last_seen_at": now,
-        "last_pin_at": now,
-    }
+    if funciones_extras.DEMO_MODE:
+        lector = funciones_extras.demo_lector_identity(device_id=device_id)
+    else:
+        admin_user = str(session.get("admin_user") or funciones_extras.ADMIN_USER).strip() or funciones_extras.ADMIN_USER
+        now = funciones_extras.now_iso()
+        lector = {
+            "uid": f"admin_{admin_user}",
+            "nombre": f"{admin_user} (admin)",
+            "rol": "admin",
+            "pin": "",
+            "device_id": device_id,
+            "login_at": now,
+            "last_seen_at": now,
+            "last_pin_at": now,
+        }
     session["lector_auth"] = lector
     session.permanent = True
     firebase.registrar_lector_activo(lector, modo=modo)
@@ -198,6 +206,10 @@ def health():
 @rutas_bp.route("/api/lector_estado")
 def api_lector_estado():
     lector = funciones_extras.lector_session_data()
+    if funciones_extras.DEMO_MODE and not lector:
+        lector = funciones_extras.demo_lector_identity()
+        session["lector_auth"] = lector
+        session.permanent = True
     if not lector or funciones_extras.lector_is_idle(lector):
         if lector and funciones_extras.lector_is_idle(lector):
             funciones_extras.lector_logout_session()
@@ -218,7 +230,7 @@ def api_lector_estado():
                     "aforo_actual": aforo_actual,
                     "aforo_max": aforo_max,
                     "lector": {"uid": "", "nombre": "", "rol": ""},
-                    "requires_pin": True,
+                    "requires_pin": False if funciones_extras.DEMO_MODE else True,
                 },
             }
         )

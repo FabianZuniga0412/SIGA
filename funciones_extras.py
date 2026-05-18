@@ -443,6 +443,27 @@ def lector_session_data():
     data = session.get("lector_auth") or {}
     return data if isinstance(data, dict) else {}
 
+
+def demo_admin_identity():
+    return {
+        "admin_ok": True,
+        "admin_user": ADMIN_USER,
+    }
+
+
+def demo_lector_identity(device_id = ""):
+    now = now_iso()
+    return {
+        "uid": "demo_lector",
+        "nombre": "Lector Demo",
+        "rol": "admin",
+        "pin": "",
+        "device_id": normalize_device_id(device_id),
+        "login_at": now,
+        "last_seen_at": now,
+        "last_pin_at": now,
+    }
+
 def generar_csv_invitados(rows):
     output = io.StringIO()
     writer = csv.writer(output)
@@ -466,6 +487,8 @@ def generar_csv_invitados(rows):
 
 def lector_touch_session(update_pin_time = False):
     data = lector_session_data()
+    if DEMO_MODE and not data:
+        data = demo_lector_identity()
     if not data:
         return {}
     data["last_seen_at"] = now_iso()
@@ -679,6 +702,9 @@ def invitados_indexes(invitados, exclude_key = None):
         return ""
 
 def lector_logout_session():
+    if DEMO_MODE:
+        session.pop("lector_auth", None)
+        return
     session.pop("lector_auth", None)
 
 def obtener_salt_secreto():
@@ -697,6 +723,8 @@ def extraer_datos_qr(payload):
     return invitado_id, hash_qr
 
 def actor_admin():
+    if DEMO_MODE:
+        return ADMIN_USER
     return str(session.get("admin_user") or ADMIN_USER)
 
 def parse_timestamp(value):
@@ -815,6 +843,12 @@ def is_valid_pin(pin):
 
 def require_lector_session():
     data = lector_session_data()
+    if DEMO_MODE:
+        if not data:
+            data = demo_lector_identity()
+            session["lector_auth"] = data
+            session.permanent = True
+        return lector_touch_session(), None
     if not data:
         return None, ({"ok": False, "error": "PIN requerido", "code": "LECTOR_PIN_REQUIRED"}, 401)
     if lector_is_idle(data):
@@ -826,6 +860,8 @@ def normalizar_id(value):
     return str(value or "").strip()
 
 def lector_is_idle(data):
+    if DEMO_MODE:
+        return False
     last_seen = parse_timestamp(data.get("last_seen_at") or data.get("login_at"))
     delta = (datetime.now(timezone.utc) - last_seen).total_seconds()
     return delta > max(LECTOR_IDLE_TIMEOUT_SECONDS, 60)
@@ -863,6 +899,13 @@ def paginar_rows(rows, page, page_size):
     }
 
 def admin_logueado():
+    if DEMO_MODE:
+        if not session.get("admin_user"):
+            session["admin_user"] = ADMIN_USER
+        if not session.get("admin_ok"):
+            session["admin_ok"] = True
+        session.permanent = True
+        return True
     return bool(session.get("admin_ok"))
 
 def construir_reporte_data(fecha_desde = None, fecha_hasta = None):
