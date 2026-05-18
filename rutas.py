@@ -184,7 +184,7 @@ def api_lector_logout():
 
 @rutas_bp.route("/health")
 def health():
-    return jsonify({"ok": True, "firebase_ready": firebase.firebase_ready})
+    return jsonify({"ok": True, "firebase_ready": firebase.firebase_ready, "demo_mode": firebase.DEMO_MODE})
 
 @rutas_bp.route("/api/lector_estado")
 def api_lector_estado():
@@ -260,7 +260,7 @@ def api_sync_retry():
         return jsonify({"ok": False, "error": "No autorizado"}), 401
     sync.sync_meta["last_attempt"] = funciones_extras.now_iso()
     try:
-        stats = sincronizar_pendientes()
+        stats = sync.sincronizar_pendientes()
         if stats.get("failed", 0) == 0:
             sync.sync_meta["last_success"] = funciones_extras.now_iso()
             sync.sync_meta["last_error"] = None

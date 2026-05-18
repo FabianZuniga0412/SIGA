@@ -1,0 +1,8 @@
+firebase-service-account.json
+certs/
+scratch_*.py
+*.pem
+.env
+.venv/
+__pycache__/
+*.pyc

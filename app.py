@@ -15,12 +15,23 @@ import firebase
 import sync
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "cambia-esta-clave-en-produccion")
+DEMO_MODE = os.getenv("SIGA_DEMO", "").strip().lower() in {"1", "true", "yes", "si"}
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "demo-vercel-secret" if DEMO_MODE else "cambia-esta-clave-en-produccion")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=False,
 )
+
+
+@app.context_processor
+def inject_demo_context():
+    return {
+        "demo_mode": DEMO_MODE,
+        "demo_admin_user": os.getenv("ADMIN_USER", "admin"),
+        "demo_admin_password": os.getenv("ADMIN_PASSWORD", "demo123" if DEMO_MODE else "admin123"),
+        "demo_lector_pin": "123456",
+    }
 
 import rutas
 app.register_blueprint(rutas.rutas_bp)

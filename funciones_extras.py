@@ -14,9 +14,10 @@ import firebase
 import sync
 
 # Global config variables
+DEMO_MODE = os.getenv("SIGA_DEMO", "").strip().lower() in {"1", "true", "yes", "si"}
 SALT_SECRETO = os.getenv("QR_SALT_SECRETO", "CAMBIA_ESTE_SALT")
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "demo123" if DEMO_MODE else "admin123")
 ADMIN_PASSWORD_HASH = hashlib.sha512((ADMIN_PASSWORD + SALT_SECRETO).encode("utf-8")).hexdigest()
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_APP_PASSWORD = os.getenv("SMTP_APP_PASSWORD", "")
@@ -636,6 +637,23 @@ def construir_admin_state():
 
 def audit_evento(entity, entity_id, action, before=None, after=None, extra=None):
     print(f"Cambio registrado: {entity} {action}")
+    if not getattr(firebase, "firebase_ready", False):
+        return
+    try:
+        payload = {
+            "timestamp": now_iso(),
+            "actor": actor_admin(),
+            "entidad": entity,
+            "entity": entity,
+            "entity_id": entity_id,
+            "accion": action,
+            "action": action,
+            "changes": calc_changes(before or {}, after or {}),
+            "extra": extra or {},
+        }
+        firebase.db.reference("auditoria/eventos").push(payload)
+    except Exception as exc:
+        print(f"[WARN] No se pudo registrar auditoria: {exc}")
 
 def normalize_pin(value):
     return "".join(ch for ch in str(value or "") if ch.isdigit())
@@ -813,6 +831,15 @@ def lector_is_idle(data):
     return delta > max(LECTOR_IDLE_TIMEOUT_SECONDS, 60)
 
 def smtp_client():
+    if DEMO_MODE:
+        class DemoSMTP:
+            def send(self, *args, **kwargs):
+                return None
+
+            def close(self):
+                return None
+
+        return DemoSMTP(), None
     if not SMTP_USER or not SMTP_APP_PASSWORD:
         return None, "Faltan SMTP_USER o SMTP_APP_PASSWORD en variables de entorno"
     try:

@@ -9,6 +9,12 @@
   <body>
     <main class="container small">
       <h1>Login Admin</h1>
+      {% if demo_mode %}
+      <p class="demo-login-hint">
+        Demo Vercel: usuario <strong>{{ demo_admin_user }}</strong>, password <strong>{{ demo_admin_password }}</strong>.
+        Lector: PIN <strong>{{ demo_lector_pin }}</strong>.
+      </p>
+      {% endif %}
       {% if error %}
       <p class="error">{{ error }}</p>
       {% endif %}

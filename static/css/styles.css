@@ -183,6 +183,16 @@ label, input, button, select {
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
 }
+.demo-login-hint {
+  margin-top: var(--spacing-2);
+  padding: 12px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
 .container form { margin-top: var(--spacing-3); }
 .container label {
   display: block;

@@ -2,16 +2,26 @@ import os
 from datetime import datetime, timezone
 import firebase_admin
 from firebase_admin import credentials, db
+import demo_store
 import funciones_extras
 import sync
 
 firebase_ready = False
+DEMO_MODE = demo_store.DEMO_MODE
 FIREBASE_DB_URL = os.getenv("FIREBASE_DB_URL", "")
 FIREBASE_CRED_PATH = os.getenv("FIREBASE_CRED_PATH", "firebase-service-account.json")
 MIN_CUPO_TOTAL = 3
 
 def init_firebase():
-    global firebase_ready
+    global firebase_ready, db
+
+    if DEMO_MODE:
+        if demo_store.DEMO_RESET_ON_BOOT:
+            demo_store.reset()
+        db = demo_store.db
+        firebase_ready = True
+        print("[OK] SIGA demo mode initialized without Firebase.")
+        return
 
     if not FIREBASE_DB_URL:
         print("[WARN] FIREBASE_DB_URL no configurado. Modo local sin Firebase.")
