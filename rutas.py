@@ -23,6 +23,8 @@ import qr_lector
 @rutas_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
+        if funciones_extras.admin_logueado():
+            return redirect(url_for("rutas.admin"))
         return render_template("login.html")
 
     usuario = request.form.get("usuario", "")
@@ -51,7 +53,14 @@ def admin():
 
 @rutas_bp.route("/")
 def home():
-    return redirect(url_for("rutas.lector"))
+    if funciones_extras.DEMO_MODE:
+        session.permanent = True
+        session["admin_ok"] = True
+        session["admin_user"] = funciones_extras.ADMIN_USER
+        return redirect(url_for("rutas.admin"))
+    if funciones_extras.admin_logueado():
+        return redirect(url_for("rutas.admin"))
+    return redirect(url_for("rutas.login"))
 
 @rutas_bp.route("/lector")
 def lector():
